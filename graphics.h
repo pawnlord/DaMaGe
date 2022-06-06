@@ -4,8 +4,10 @@
 #ifdef __MINGW32__
     #define _WIN32_WINNT 0x0501
     #include <mingw.thread.h>
+    #include <mingw.mutex.h>
 #else
     #include <thread>
+    #include <mutex>
 #endif
 #include <SDL2/SDL.h>
 #include <cstdlib>
@@ -32,9 +34,12 @@ class GraphicsManager{
 
     void add_texture();
 
+    void stopSDL();
 
     private:
-    void stopSDL();
+    int w, h;
+    bool running = true;
+    std::mutex runmx;
     SDL_Window* win;
     SDL_Renderer* ren;
     std::thread graphicsThread;
