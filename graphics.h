@@ -13,12 +13,16 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
+#include <fstream>
+#include <sstream>
+
 struct Pixel : SDL_Rect{
     int r,g,b;
     Pixel(int x, int y, int s, int r, int g, int b);
     void set_color(int r, int g, int b);
     void set_color(int v);
 };
+
 
 class GraphicsManager{
     public:
@@ -32,7 +36,7 @@ class GraphicsManager{
     // render thread callback
     void render_cb();
 
-    void add_texture();
+    void add_sprite(std::vector<std::vector<int> > pixels, int x, int y);
 
     void stopSDL();
 
