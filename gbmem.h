@@ -23,6 +23,13 @@ struct cart_info{
     int8_t glob_cs;
 };
 
+struct timereg_t{
+    uint8_t DIV;
+    uint8_t TIMA;
+    uint8_t TMA;
+    uint8_t TAC;
+};
+
 void print_cart_info(cart_info* inf);
 
 class Memory{
@@ -31,8 +38,13 @@ class Memory{
     char get(uint16_t addr);
     void set(uint8_t v, uint16_t addr);
     cart_info* load_cartridge(std::string filename);
+    timereg_t* timereg;
+    // return pointer into memory, for certain structures.
+    uint8_t *getref(uint16_t addr);
+    void req_int(uint8_t flags);
+
     private:
-    uint8_t* raw_mem;
+    uint8_t *raw_mem;
     cart_info inf;
 };
 
