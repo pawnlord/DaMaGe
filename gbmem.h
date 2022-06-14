@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include "constants.h"
 
 struct cart_info{
     int32_t entry_point;
@@ -42,7 +43,7 @@ class Memory{
     // return pointer into memory, for certain structures.
     uint8_t *getref(uint16_t addr);
     void req_int(uint8_t flags);
-
+    void reset_regs();
     private:
     uint8_t *raw_mem;
     cart_info inf;

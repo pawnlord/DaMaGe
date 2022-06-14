@@ -4,29 +4,34 @@
 #include "gbmem.h"
 #include <unordered_map>
 #include <cmath>
+#include <queue>
 #include "gbdisplay.h"
 
-typedef union {
+union gbreg {
     struct {
         uint8_t r8l;        
         uint8_t r8h;
     } hl;
     uint16_t r16;
-} gbreg;
+    gbreg& operator=(uint16_t);
+};
 
 typedef void (*opfunc_t)(uint32_t);
 
-void nop_f(uint32_t i){}
 
 struct op_t{
     // CPU Cycles, clock cycles/4
     int cycles;
     opfunc_t opfunc;
+    op_t(){
+        this->cycles = 0;
+        this->opfunc = nullptr;
+    }
     op_t(int cycles, opfunc_t opfunc){
         this->cycles = cycles;
         this->opfunc = opfunc;
     }
-} nop(1, nop_f);
+};
 
 class Clock{
     public:
@@ -40,13 +45,38 @@ class Clock{
     int tac;
 };
 
+struct object_t{
+    uint8_t y;
+    uint8_t x;
+    uint8_t idx;
+    uint8_t flag;
+};
+
+struct pixel_t{
+    uint8_t color;
+    uint8_t palette;
+    uint8_t bgpriority;
+};
+
 class PPU{
     public:
     PPU(Memory *mem);
     void tick();
     private:
+    bool getlcdc(int value);
+
     Memory *mem;
     layer bg, window, objects;
+    
+    uint16_t *tile_ref;
+    uint8_t *LCDC;
+    uint8_t *LCDStat;
+   
+    object_t *OAM;
+
+    enum mode_e {M0 = 0, M1, M2, M3} mode;
+    std::queue<pixel_t> fifo;
+
 };
 
 class CPU{
