@@ -20,7 +20,7 @@ void Memory::reset_regs(){
     set(0, kTIMA);
     set(0, kTMA);
     set(0xF8, kTAC);
-    set(0xE1, kIF);
+    set(0x0, kIF);
     set(0x80, kNR1(0));
     set(0x80, kNR1(0));
     set(0x80, kNR1(0));
@@ -101,7 +101,8 @@ void Memory::reset_int(uint8_t flags){
 }
 uint8_t Memory::get_int_num(){
     for(int i = 0; i < 5; i++){
-        if(raw_mem[0xFF0F] & pow(2, i) > 0){
+        if((raw_mem[0xFF0F] & ((uint8_t)pow(2, i))) > 0){
+            std::cout << std::hex << (int)raw_mem[0xFF0F] << std::endl;
             return i;
         }
     }

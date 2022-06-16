@@ -67,15 +67,21 @@ class PPU{
 
 };
 
+enum regtype_e {
+    HIGH, LOW, FULL
+};
+
 class CPU{
     public:
     CPU(Memory *mem, Clock *clock);
     void run();
     private:
+    gbreg* get_first_arg(int lowbyte, regtype_e* ishigh);
+    gbreg* get_last_arg(int lowbyte, regtype_e* ishigh);
     bool tick(uint8_t cpu_cycles);
     void halt();
     void push(uint16_t dat);
-    void pop(uint16_t dat);
+    void pop(uint16_t* dat);
     Memory *mem;
     Clock *clock;
     PPU *ppu;
