@@ -7,6 +7,7 @@
 #include <queue>
 #include "gbdisplay.h"
 
+
 union gbreg {
     struct {
         uint8_t r8l;        
@@ -16,21 +17,8 @@ union gbreg {
     gbreg& operator=(uint16_t);
 };
 
-typedef void (*opfunc_t)(uint32_t);
-
-
-struct op_t{
-    // CPU Cycles, clock cycles/4
-    int cycles;
-    opfunc_t opfunc;
-    op_t(){
-        this->cycles = 0;
-        this->opfunc = nullptr;
-    }
-    op_t(int cycles, opfunc_t opfunc){
-        this->cycles = cycles;
-        this->opfunc = opfunc;
-    }
+struct regs_t{
+    gbreg AF, BC, DE, HL, SP, PC;    
 };
 
 class Clock{
@@ -82,15 +70,17 @@ class PPU{
 class CPU{
     public:
     CPU(Memory *mem, Clock *clock);
+    void run();
     private:
-    void populate_ops();
-    void tick(uint8_t cpu_cycles);
+    bool tick(uint8_t cpu_cycles);
+    void halt();
+    void push(uint16_t dat);
+    void pop(uint16_t dat);
     Memory *mem;
     Clock *clock;
     PPU *ppu;
-    std::unordered_map<uint8_t, op_t> ops;    
     bool IME, halt_flag;
-    gbreg AF, BC, DE, HL, SP, PC;
+    regs_t regs;
     // points to AF.r8l
     uint8_t *flags;
 

@@ -58,6 +58,13 @@ void Memory::reset_regs(){
     set(0, kIE);
 }
 
+uint8_t Memory::get(uint16_t idx){
+    return raw_mem[idx];
+}
+
+uint8_t& Memory::operator[](int idx){
+    return raw_mem[idx];
+}
 
 void Memory::set(uint8_t v, uint16_t addr){
     raw_mem[addr] = v;
@@ -84,4 +91,19 @@ uint8_t* Memory::getref(uint16_t addr){
 
 void Memory::req_int(uint8_t flags){
     raw_mem[0xFF0F] |= flags;
+}
+
+bool Memory::get_int(uint8_t flags){
+    return (raw_mem[0xFF0F] & flags) > 0;
+}
+void Memory::reset_int(uint8_t flags){
+    raw_mem[0xFF0F] &= ~(flags);
+}
+uint8_t Memory::get_int_num(){
+    for(int i = 0; i < 5; i++){
+        if(raw_mem[0xFF0F] & pow(2, i) > 0){
+            return i;
+        }
+    }
+    return -1;
 }

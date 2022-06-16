@@ -8,13 +8,13 @@ gbreg& gbreg::operator=(const uint16_t a){
 CPU::CPU(Memory *mem, Clock*clock){
     this->mem = mem;
     this->clock = clock;
-    PC = 0x100;
-    AF.hl.r8h = 0x1;
-    BC = 0x13;
-    DE = 0xC1;
-    HL = 0x8403;
-    SP = 0xFFFE;
-    flags = &AF.hl.r8l;
+    regs.PC = 0x100;
+    regs.AF.hl.r8h = 0x1;
+    regs.BC = 0x13;
+    regs.DE = 0xC1;
+    regs.HL = 0x8403;
+    regs.SP = 0xFFFE;
+    flags = &regs.AF.hl.r8l;
     (*flags) = 0b1011;
     IME = true;
     halt_flag = false;
@@ -22,21 +22,52 @@ CPU::CPU(Memory *mem, Clock*clock){
     IF = mem->getref(0xFF0F);
 }
 
-void nop_f(uint32_t i){}
+void CPU::halt(){
+    while(true){
+        if(tick(1)){
+            return;
+        }
+    }
+}
 
-void CPU::populate_ops(){
-    op_t nop(1, nop_f);
-    op_t (1, nop_f);
-    ops[0x0] = nop;
+void CPU::run(){
+    while(true){
+        uint8_t opcode = mem->get(regs.PC.r16);
+        uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
+        if(h >= 0x4 && h <= 0x7){
+            if(opcode == 0x77){
+                halt();
+            }
+
+        }
+    }
+}
+
+void CPU::push(uint16_t dat){
+    regs.SP.r16-=1;
+    mem->set(dat/0x10,regs.SP.r16);
+    regs.SP.r16-=1;
+    mem->set(dat%0x10,regs.SP.r16);
 }
 
 
-
-void CPU::tick(uint8_t cpu_cycles){
+bool CPU::tick(uint8_t cpu_cycles){
     for(int i = 0; i < cpu_cycles; i++){
         clock->tick();
         ppu->tick();
     }
+    // any interrupt
+    if(!mem->get_int(0xFF)){
+        return false;        
+    }
+
+    IME = false;
+    push(regs.PC.r16);
+    int interrupt = mem->get_int_num();
+    regs.PC.r16 = 0x40 + (interrupt * 8);
+    mem->reset_int(pow(2, interrupt));
+    
+    return true;
 }
 
 PPU::PPU(Memory *mem){

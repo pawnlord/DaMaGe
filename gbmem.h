@@ -1,6 +1,7 @@
 #ifndef GBMEM_H
 #define GBMEM_H
 #include <cstdint>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -36,13 +37,17 @@ void print_cart_info(cart_info* inf);
 class Memory{
     public:
     Memory();
-    char get(uint16_t addr);
+    uint8_t get(uint16_t addr);
+    uint8_t& operator[](int);
     void set(uint8_t v, uint16_t addr);
     cart_info* load_cartridge(std::string filename);
     timereg_t* timereg;
     // return pointer into memory, for certain structures.
     uint8_t *getref(uint16_t addr);
     void req_int(uint8_t flags);
+    bool get_int(uint8_t flags);
+    uint8_t get_int_num();
+    void reset_int(uint8_t flags);
     void reset_regs();
     private:
     uint8_t *raw_mem;
