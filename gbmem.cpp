@@ -92,17 +92,19 @@ uint8_t* Memory::getref(uint16_t addr){
 void Memory::req_int(uint8_t flags){
     raw_mem[0xFF0F] |= flags;
 }
+void Memory::unreq_int(uint8_t flags){
+    raw_mem[0xFF0F] &= ~(flags);
+}
 
 bool Memory::get_int(uint8_t flags){
-    return (raw_mem[0xFF0F] & flags) > 0;
+    return (raw_mem[0xFFFF] & flags) > 0;
 }
 void Memory::reset_int(uint8_t flags){
-    raw_mem[0xFF0F] &= ~(flags);
+    raw_mem[0xFFFF] &= ~(flags);
 }
 uint8_t Memory::get_int_num(){
     for(int i = 0; i < 5; i++){
         if((raw_mem[0xFF0F] & ((uint8_t)pow(2, i))) > 0){
-            std::cout << std::hex << (int)raw_mem[0xFF0F] << std::endl;
             return i;
         }
     }

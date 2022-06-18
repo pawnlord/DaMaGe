@@ -45,6 +45,7 @@ class Memory{
     // return pointer into memory, for certain structures.
     uint8_t *getref(uint16_t addr);
     void req_int(uint8_t flags);
+    void unreq_int(uint8_t flags);
     bool get_int(uint8_t flags);
     uint8_t get_int_num();
     void reset_int(uint8_t flags);

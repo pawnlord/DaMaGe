@@ -82,6 +82,7 @@ class CPU{
     void halt();
     void push(uint16_t dat);
     void pop(uint16_t* dat);
+    void cmp(int a, int b);
     Memory *mem;
     Clock *clock;
     PPU *ppu;
