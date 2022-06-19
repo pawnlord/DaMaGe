@@ -8,6 +8,7 @@ gbreg& gbreg::operator=(const uint16_t a){
 CPU::CPU(Memory *mem, Clock*clock){
     this->mem = mem;
     this->clock = clock;
+    ppu = new PPU(mem);
     regs.PC = 0x100;
     regs.AF.hl.r8h = 0x1;
     regs.BC = 0x13;
@@ -169,7 +170,7 @@ void CPU::reti(){
 void CPU::run(){
     while(true){
         uint8_t opcode = mem->get(regs.PC.r16);
-        std::cout << std::hex << "addr: " << regs.PC.r16 <<  ", opcode: "  << (int)opcode << std::endl;
+        std::cout << regs.PC.r16 << " " << (int)opcode << "\n";
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
         int ticks = 1;
         // misc.
@@ -201,7 +202,7 @@ void CPU::run(){
                 ticks = 3;
             }
             if(l == 0x2){
-                firstarg->r16 = regs.AF.hl.r8h;
+                mem->set(regs.AF.hl.r8h, firstarg->r16);
                 regs.PC.r16 += 1;
                 ticks = 1;
                 if(firstarg == &regs.HL){
@@ -218,24 +219,42 @@ void CPU::run(){
                 }
                 setval(firstarg, FULL, getval(firstarg, FULL)+1);    
                 regs.PC.r16 += 1;
-                ticks = 1;
+                ticks = 2;
             }
             if(l == 0x4 || l == 0xC){
-                setval(firstarg, ishigh, getval(firstarg, ishigh)+1);    
+                uint8_t val;
+                if(ishigh != FULL){
+                    val = getval(firstarg, ishigh)+1;
+                    setval(firstarg, ishigh, val);    
+                } else {
+                    val = mem->get(firstarg->r16)+1;
+                    mem->set(val, firstarg->r16);
+                }
                 regs.PC.r16 += 1;
                 ticks = 1;
-                (*flags) = (getval(firstarg, ishigh) == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
+                (*flags) = (val == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
             }
             if(l == 0x5 || l == 0xD){
-                setval(firstarg, ishigh, getval(firstarg, ishigh)-1);    
+                uint8_t val;
+                if(ishigh != FULL){
+                    val = getval(firstarg, ishigh)-1;
+                    setval(firstarg, ishigh, val);    
+                } else {
+                    val = mem->get(firstarg->r16)-1;
+                    mem->set(val, firstarg->r16);
+                }    
                 regs.PC.r16 += 1;
                 ticks = 1;
-                (*flags) = (getval(firstarg, ishigh) == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
+                (*flags) = (val == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
             }
             if(l == 0x6 ||  l == 0xE){
                 regs.PC.r16 += 1;
                 uint8_t val = mem->get(regs.PC.r16);
-                setval(firstarg, ishigh, val);
+                if(ishigh != FULL){
+                    setval(firstarg, ishigh, val);
+                } else {
+                    mem->set(val, getval(firstarg, ishigh));
+                }
                 regs.PC.r16 += 1;
                 ticks = 2;
                 if(ishigh == FULL){
@@ -272,8 +291,19 @@ void CPU::run(){
                     regs.PC.r16+=1;
                 }
             }
+            if(l == 0x9){
+                if(ishigh == FULL){
+                    firstarg = &regs.SP;
+                }
+                uint16_t val = getval(firstarg, FULL);
+                uint8_t carry = ((regs.HL.r16) + val < 0) << 0x4;
+                uint8_t zero = ((regs.HL.r16) + val == 0) << 0x7;
+                (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                regs.HL.r16 = regs.HL.r16 + val;
+                regs.PC.r16+=1;
+            }
             if(l == 0xA){
-                regs.AF.hl.r8h = firstarg->r16;
+                regs.AF.hl.r8h = mem->get(firstarg->r16);
                 regs.PC.r16 += 1;
                 if(firstarg == &regs.HL){
                     if(ishigh == FULL){
@@ -282,7 +312,15 @@ void CPU::run(){
                         regs.HL.r16 += 1;
                     }
                 }
-                std::cout << regs.HL.r16 << std::endl;
+                //std::cout << regs.HL.r16 << std::endl;
+            }
+            if(l == 0xB){
+                if(ishigh == FULL){
+                    firstarg = &regs.SP;
+                }
+                setval(firstarg, FULL, getval(firstarg, FULL)-1);    
+                regs.PC.r16 += 1;
+                ticks = 2;
             }
             if(l == 0xF){
                 if(h == 0x0){
@@ -316,8 +354,12 @@ void CPU::run(){
                 } else{
                     ticks = 1;
                 }
-
-                setval(farg, ftype, getval(sarg, stype));
+                uint8_t val = (stype == FULL)? mem->get(getval(sarg, FULL)) : getval(sarg, stype);
+                if(ftype != FULL){
+                    setval(farg, ftype, val);
+                } else {
+                    mem->set(val, getval(farg, ftype));
+                }
             }
         }
         // operators
@@ -332,7 +374,7 @@ void CPU::run(){
             }
 
             uint8_t* A = &regs.AF.hl.r8h;
-            int val = (int)getval(arg, ishigh);
+            int val = (ishigh==FULL)?mem->get(getval(arg, FULL)):(int)getval(arg, ishigh);
             if(l <= 7){
                 if(h == 0x8){
                     uint8_t carry = ((*A) + val < 0) << 0x4;
@@ -522,7 +564,7 @@ void CPU::pop(uint16_t* dat){
 bool CPU::tick(uint8_t cpu_cycles){
     for(int i = 0; i < cpu_cycles; i++){
         clock->tick();
-//        ppu->tick();
+        ppu->tick();
     }
     // any interrupt
     if(!mem->get_int(0xFF)){
@@ -530,9 +572,9 @@ bool CPU::tick(uint8_t cpu_cycles){
     }
 
 
-    push(regs.PC.r16);
     int interrupt = mem->get_int_num();
     if(IME && ((*IE) & (1 << interrupt)) > 0){
+        push(regs.PC.r16);
         std::cout << "Interrupt Found: " << interrupt << "\n";
         regs.PC.r16 = 0x40 + (interrupt * 8);
         mem->reset_int(pow(2, interrupt));
@@ -542,31 +584,6 @@ bool CPU::tick(uint8_t cpu_cycles){
     return true;
 }
 
-PPU::PPU(Memory *mem){
-    this->mem = mem;
-    this->tile_ref = (uint16_t*)mem->getref(0x8000);
-    this->LCDC = mem->getref(0xFF40);
-    this->LCDStat = mem->getref(0xFF41);
-    this->OAM = (object_t*)mem->getref(0xFE00);
-    this->mode = M2; 
-}
-
-bool PPU::getlcdc(int val){
-    int temp = (int)(pow(2, val));
-    if (temp & (*LCDC) > 0){
-        return true;
-    }
-    return false;
-}
-
-void PPU::tick(){
-    if(getlcdc(7)){
-
-        if(fifo.empty()){
-
-        }
-    }
-}
 
 Clock::Clock(Memory *mem){
     this->mem = mem;

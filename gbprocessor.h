@@ -1,11 +1,11 @@
 #ifndef GBPROCESSOR_H
 #define GBPROCESSOR_H
-#include <cstdint>
+#include "gbppu.h"
 #include "gbmem.h"
 #include <unordered_map>
+#include <cstdint>
 #include <cmath>
 #include <queue>
-#include "gbdisplay.h"
 
 
 union gbreg {
@@ -33,39 +33,6 @@ class Clock{
     int tac;
 };
 
-struct object_t{
-    uint8_t y;
-    uint8_t x;
-    uint8_t idx;
-    uint8_t flag;
-};
-
-struct pixel_t{
-    uint8_t color;
-    uint8_t palette;
-    uint8_t bgpriority;
-};
-
-class PPU{
-    public:
-    PPU(Memory *mem);
-    void tick();
-    private:
-    bool getlcdc(int value);
-
-    Memory *mem;
-    layer bg, window, objects;
-    
-    uint16_t *tile_ref;
-    uint8_t *LCDC;
-    uint8_t *LCDStat;
-   
-    object_t *OAM;
-
-    enum mode_e {M0 = 0, M1, M2, M3} mode;
-    std::queue<pixel_t> fifo;
-
-};
 
 enum regtype_e {
     HIGH, LOW, FULL

@@ -69,12 +69,18 @@ uint8_t& Memory::operator[](int idx){
 void Memory::set(uint8_t v, uint16_t addr){
     raw_mem[addr] = v;
 }
+void Memory::dump(){
+    std::ofstream oftest ("test.dmp", std::ofstream::binary);
+    oftest.write((char*)raw_mem, 0x10000);
+    oftest.close();
+}
 
 cart_info* Memory::load_cartridge(std::string filename){
     std::ifstream ifs (filename, std::ifstream::binary);
     std::filebuf* pbuf = ifs.rdbuf();
     std::size_t size = pbuf->pubseekoff (0,ifs.end,ifs.in);
     pbuf->pubseekpos (0,ifs.in);
+    std::cout << size << std::endl;
     pbuf->sgetn((char*)raw_mem, size);
     
     // load cartridge into inf
@@ -98,6 +104,9 @@ void Memory::unreq_int(uint8_t flags){
 
 bool Memory::get_int(uint8_t flags){
     return (raw_mem[0xFFFF] & flags) > 0;
+}
+bool Memory::get_int_enabled(uint8_t flags){
+    return (raw_mem[0xFF0F] & flags) > 0;
 }
 void Memory::reset_int(uint8_t flags){
     raw_mem[0xFFFF] &= ~(flags);

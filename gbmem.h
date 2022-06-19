@@ -37,6 +37,7 @@ void print_cart_info(cart_info* inf);
 class Memory{
     public:
     Memory();
+    void dump();
     uint8_t get(uint16_t addr);
     uint8_t& operator[](int);
     void set(uint8_t v, uint16_t addr);
@@ -48,6 +49,7 @@ class Memory{
     void unreq_int(uint8_t flags);
     bool get_int(uint8_t flags);
     uint8_t get_int_num();
+    bool get_int_enabled(uint8_t flags);
     void reset_int(uint8_t flags);
     void reset_regs();
     private:
