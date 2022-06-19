@@ -67,7 +67,9 @@ class CPU{
 
     // interrupt logic
     // pointers to interrupt flags
-    uint8_t *IE, *IF;    
+    uint8_t *IE, *IF;
+    bool debug = true;
+    uint32_t cycles_to_run = 1;    
 };
 
 #endif

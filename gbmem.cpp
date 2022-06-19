@@ -58,8 +58,11 @@ void Memory::reset_regs(){
     set(0, kIE);
 }
 
-uint8_t Memory::get(uint16_t idx){
-    return raw_mem[idx];
+uint8_t Memory::get(uint16_t addr){
+    if(addr <= 0x7FFF || (addr >= 0xA00 && addr <= 0xBFFF)){
+        return mbc.get(addr);
+    }
+    return raw_mem[addr];
 }
 
 uint8_t& Memory::operator[](int idx){
@@ -67,7 +70,11 @@ uint8_t& Memory::operator[](int idx){
 }
 
 void Memory::set(uint8_t v, uint16_t addr){
-    raw_mem[addr] = v;
+    if(addr <= 0x7FFF || (addr >= 0xA00 && addr <= 0xBFFF)){
+        mbc.set(addr, v);
+    } else if(addr <= 0xFFFF){
+        raw_mem[addr] = v;
+    }
 }
 void Memory::dump(){
     std::ofstream oftest ("test.dmp", std::ofstream::binary);
@@ -76,15 +83,9 @@ void Memory::dump(){
 }
 
 cart_info* Memory::load_cartridge(std::string filename){
-    std::ifstream ifs (filename, std::ifstream::binary);
-    std::filebuf* pbuf = ifs.rdbuf();
-    std::size_t size = pbuf->pubseekoff (0,ifs.end,ifs.in);
-    pbuf->pubseekpos (0,ifs.in);
-    std::cout << size << std::endl;
-    pbuf->sgetn((char*)raw_mem, size);
-    
+    mbc.fromfile(filename);   
     // load cartridge into inf
-    std::memcpy(&inf, raw_mem+0x100, sizeof(cart_info));
+    std::memcpy(&inf, mbc.full+0x100, sizeof(cart_info));
     reset_regs();
     print_cart_info(&inf);
     return &inf;

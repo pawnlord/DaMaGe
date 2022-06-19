@@ -4,9 +4,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
-#include <fstream>
 #include <cstring>
 #include "constants.h"
+#include "gbmbc.h"
 
 struct cart_info{
     int32_t entry_point;
@@ -52,6 +52,7 @@ class Memory{
     bool get_int_enabled(uint8_t flags);
     void reset_int(uint8_t flags);
     void reset_regs();
+    MBC mbc;
     private:
     uint8_t *raw_mem;
     cart_info inf;

@@ -168,10 +168,29 @@ void CPU::reti(){
     IME = 1;
 }
 void CPU::run(){
+    static uint32_t temp = 0;
     while(true){
+        if(mem->mbc.full[0xFFF3] == 0){
+            std::cout << "breakpoint\n";
+        }
         uint8_t opcode = mem->get(regs.PC.r16);
-        std::cout << regs.PC.r16 << " " << (int)opcode << "\n";
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
+        if(debug){
+            temp += 1;
+            cycles_to_run -= 1;
+            if(cycles_to_run == 0){
+                std::cout << regs.PC.r16 << " " << (int)opcode << "\n";
+                std::cin >> cycles_to_run;
+                if(cycles_to_run == -1){
+                    cycles_to_run = 1;
+                    std::cout << "temp" << temp << "\n";
+                    mem->dump();
+                    std::ofstream oftest ("mbc.dmp", std::ofstream::binary);
+                    oftest.write((char*)(mem->mbc.full), 0x10000);
+                    oftest.close();
+                }
+            }
+        }
         int ticks = 1;
         // misc.
         if(opcode == 0x0){
@@ -204,7 +223,7 @@ void CPU::run(){
             if(l == 0x2){
                 mem->set(regs.AF.hl.r8h, firstarg->r16);
                 regs.PC.r16 += 1;
-                ticks = 1;
+                ticks = 2;
                 if(firstarg == &regs.HL){
                     if(ishigh == FULL){
                         regs.HL.r16 -= 1;
@@ -278,7 +297,12 @@ void CPU::run(){
             }
             if(l == 0x8){
                 if(h == 0x0){
-
+                    uint16_t addr = mem->get(++regs.PC.r16);
+                    addr += mem->get(++regs.PC.r16)*0x100;
+                    mem->set(regs.SP.hl.r8l,addr);
+                    mem->set(regs.SP.hl.r8h,addr+1);
+                    ticks = 5;
+                    regs.PC.r16 += 1;    
                 } else {
                     int8_t offset = (mem->get(++regs.PC.r16));
                     uint16_t addr = regs.PC.r16;
@@ -512,6 +536,22 @@ void CPU::run(){
                     IME = false;
                     regs.PC.r16 += 1;
                 }
+                if(l == 0x6){
+                    uint8_t n = mem->get(++regs.PC.r16);
+                    if(h == 0xF){
+                        regs.AF.hl.r8h = regs.AF.hl.r8h | n;
+                        if(regs.AF.hl.r8h == 0){
+                            (*flags) &= (0x1<<0x7); // ZERO flag
+                        }
+                    } else {
+                        regs.AF.hl.r8h = regs.AF.hl.r8h & n;
+                        if(regs.AF.hl.r8h == 0){
+                            (*flags) &= (0x1<<0x7); // ZERO flag
+                        }
+                    }
+                    ticks = 2;
+                    regs.PC.r16 += 1;
+                }
                 if(l == 0xA){
                     uint16_t addr = mem->get(++regs.PC.r16);
                     addr += mem->get(++regs.PC.r16)*0x100;    
@@ -555,9 +595,9 @@ void CPU::push(uint16_t dat){
 }
 
 void CPU::pop(uint16_t* dat){
-    (*dat) = mem->get(regs.SP.r16) * 0x10;
+    (*dat) = mem->get(regs.SP.r16);
     regs.SP.r16+=1;
-    (*dat) += mem->get(regs.SP.r16);
+    (*dat) += mem->get(regs.SP.r16) * 0x10;
     regs.SP.r16+=1;
 }
 
