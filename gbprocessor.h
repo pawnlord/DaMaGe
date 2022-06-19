@@ -70,6 +70,9 @@ class PPU{
 enum regtype_e {
     HIGH, LOW, FULL
 };
+enum condition_e{
+    CON_NONE, CON_ZERO, CON_CARRY
+};
 
 class CPU{
     public:
@@ -83,6 +86,10 @@ class CPU{
     void push(uint16_t dat);
     void pop(uint16_t* dat);
     void cmp(int a, int b);
+    bool getflag(int flag);
+    bool jmp(condition_e con, bool isCall, bool isNot);
+    bool ret(condition_e con, bool isNot);
+    void reti();
     Memory *mem;
     Clock *clock;
     PPU *ppu;

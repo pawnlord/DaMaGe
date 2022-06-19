@@ -115,21 +115,57 @@ void setval(gbreg* r, regtype_e t, int val){
     }
 }
 
+bool CPU::getflag(int flag){
+    return ((*flags) & (0x1<<flag)) > 0;
+}
+
 void CPU::cmp(int a, int b){
-    int cmp = a - b;
-    if(cmp > 0){
+    int cmpn = a - b;
+    if(cmpn > 0){
         (*flags) &= ~(0x1<<0x7); // ZERO flag 
         (*flags) &= ~(0x1<<0x4); // CARRY flag 
-    } else if(cmp == 0){
+    } else if(cmpn == 0){
         (*flags) |= (0x1<<0x7); // ZERO flag
         (*flags) &= ~(0x1<<0x4); // CARRY flag 
     } else {
         (*flags) &= ~(0x1<<0x7); // ZERO flag 
         (*flags) |= (0x1<<0x4); // CARRY flag
     }
-
 }
 
+bool CPU::jmp(condition_e con, bool isCall, bool isNot){
+    if(con != CON_NONE){
+        bool flag = (con == CON_CARRY)?getflag(0x4):getflag(0x7);
+        if(isNot) {flag = !flag;}
+        if(!flag){
+            regs.PC.r16+=2;
+            return false;
+        }
+    }
+    uint16_t addr = mem->get(++regs.PC.r16);
+    addr += mem->get(++regs.PC.r16)*0x100;
+    if(isCall){
+        push(regs.PC.r16+1);
+    }
+    regs.PC.r16 = addr;
+    return true;
+}
+
+bool CPU::ret(condition_e con, bool isNot){
+    if(con != CON_NONE){
+        bool flag = (con == CON_CARRY)?getflag(0x4):getflag(0x7);
+        if(isNot) {flag = !flag;}
+        if(!flag){
+            return false;
+        }
+    }
+    pop(&regs.PC.r16);
+    return true;
+}
+void CPU::reti(){
+    ret(CON_NONE, false);
+    IME = 1;
+}
 void CPU::run(){
     while(true){
         uint8_t opcode = mem->get(regs.PC.r16);
@@ -144,14 +180,57 @@ void CPU::run(){
             regtype_e ishigh;
             gbreg* firstarg = get_first_arg(opcode, &ishigh);
             if(l == 0x0){
-                uint16_t start = regs.PC.r16;
-                uint16_t addr = start + (mem->get(++regs.PC.r16));
+                char i8 = (int)(mem->get(++regs.PC.r16));
+                uint16_t addr = regs.PC.r16 + i8;
                 ticks = 2;
-                if((h == 0x2 && !(((*flags) & (0x1<<0x7)) > 0)) ||
-                    (h == 0x3 && !(((*flags) & (0x1<<0x4)) > 0))){ 
+                if(((h == 0x2 && !(getflag(0x7)))) ||
+                    (h == 0x3 && !(getflag(0x4)))){
                     regs.PC.r16 = addr;
                     ticks = 3;
+                } 
+                regs.PC.r16 += 1;
+            }
+            if(l == 0x1){
+                if(ishigh == FULL){
+                    firstarg = &regs.SP;
                 }
+                uint16_t u16 = mem->get(++regs.PC.r16);
+                u16 += mem->get(++regs.PC.r16)*0x100;
+                firstarg->r16 = u16;
+                regs.PC.r16 += 1;
+                ticks = 3;
+            }
+            if(l == 0x2){
+                firstarg->r16 = regs.AF.hl.r8h;
+                regs.PC.r16 += 1;
+                ticks = 1;
+                if(firstarg == &regs.HL){
+                    if(ishigh == FULL){
+                        regs.HL.r16 -= 1;
+                    } else {
+                        regs.HL.r16 += 1;
+                    }
+                }
+            }
+            if(l == 0x3){
+                if(ishigh == FULL){
+                    firstarg = &regs.SP;
+                }
+                setval(firstarg, FULL, getval(firstarg, FULL)+1);    
+                regs.PC.r16 += 1;
+                ticks = 1;
+            }
+            if(l == 0x4 || l == 0xC){
+                setval(firstarg, ishigh, getval(firstarg, ishigh)+1);    
+                regs.PC.r16 += 1;
+                ticks = 1;
+                (*flags) = (getval(firstarg, ishigh) == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
+            }
+            if(l == 0x5 || l == 0xD){
+                setval(firstarg, ishigh, getval(firstarg, ishigh)-1);    
+                regs.PC.r16 += 1;
+                ticks = 1;
+                (*flags) = (getval(firstarg, ishigh) == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
             }
             if(l == 0x6 ||  l == 0xE){
                 regs.PC.r16 += 1;
@@ -163,12 +242,47 @@ void CPU::run(){
                     ticks = 3;
                 }
             }
-            if(l == 0x3){
-                if(ishigh == FULL){
-                    firstarg = &regs.SP;
+            if(l == 0x7){
+                if(h == 0x0){
+                    uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 7; // get last bit to keep
+                    regs.AF.hl.r8h <<= 1;
+                    regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | lastbit; 
+                } else if(h == 0x1){
+                    uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 3; // get last bit to keep
+                    uint8_t carrybit = ((*flags) & 0x8) << 4; 
+                    (*flags) = ((*flags) & ~0x10) | lastbit;
+                    regs.AF.hl.r8h <<= 1;
+                    regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | carrybit;     
                 }
-                setval(firstarg, FULL, getval(firstarg, FULL)+1);    
                 ticks = 1;
+                regs.PC.r16 += 1;
+            }
+            if(l == 0x8){
+                if(h == 0x0){
+
+                } else {
+                    int8_t offset = (mem->get(++regs.PC.r16));
+                    uint16_t addr = regs.PC.r16;
+                    ticks = 2;
+                    if(h == 0x1 || (h == 0x2 && (getflag(0x7))) 
+                                || (h == 0x3 && (getflag(0x7)))){ // JR
+                        regs.PC.r16=addr;
+                        ticks = 3;
+                    }
+                    regs.PC.r16+=1;
+                }
+            }
+            if(l == 0xA){
+                regs.AF.hl.r8h = firstarg->r16;
+                regs.PC.r16 += 1;
+                if(firstarg == &regs.HL){
+                    if(ishigh == FULL){
+                        regs.HL.r16 -= 1;
+                    } else {
+                        regs.HL.r16 += 1;
+                    }
+                }
+                std::cout << regs.HL.r16 << std::endl;
             }
             if(l == 0xF){
                 if(h == 0x0){
@@ -193,11 +307,17 @@ void CPU::run(){
             if(opcode == 0x77){
                 halt();
             } else {
+                regtype_e ftype, stype;
+                gbreg *farg, *sarg;
+                farg = get_first_arg(opcode, &ftype);
+                sarg = get_last_arg(l%0x8, &stype);
                 if(l == 0x6 || l == 0xE){
                     ticks = 2;
                 } else{
                     ticks = 1;
                 }
+
+                setval(farg, ftype, getval(sarg, stype));
             }
         }
         // operators
@@ -213,20 +333,46 @@ void CPU::run(){
 
             uint8_t* A = &regs.AF.hl.r8h;
             int val = (int)getval(arg, ishigh);
-            if(h == 0x8){
-                uint8_t carry = ((*A) + val < 0) << 0x4;
-                uint8_t zero = ((*A) + val == 0) << 0x7;
-                (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
-                (*A) = (*A) + val;
-            } else if(h == 0x9){
-                uint8_t carry = ((*A) - val < 0) << 0x4;
-                uint8_t zero = ((*A) - val == 0) << 0x7;
-                (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
-                (*A) = (*A) - val;
-            } else if(h == 0xA){
-                
-            } else if(h == 0xB){
-                
+            if(l <= 7){
+                if(h == 0x8){
+                    uint8_t carry = ((*A) + val < 0) << 0x4;
+                    uint8_t zero = ((*A) + val == 0) << 0x7;
+                    (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    (*A) = (*A) + val;
+                } else if(h == 0x9){
+                    uint8_t carry = ((*A) - val < 0) << 0x4;
+                    uint8_t zero = ((*A) - val == 0) << 0x7;
+                    (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    (*A) = (*A) - val;
+                } else if(h == 0xA){
+                    uint8_t zero = ((*A) & val == 0) << 0x7;
+                    (*flags) = ((*flags) & (~0x80)) | zero;
+                    (*A) = (*A) & val;
+                } else if(h == 0xB){
+                    uint8_t zero = ((*A) | val == 0) << 0x7;
+                    (*flags) = ((*flags) & (~0x80)) | zero;
+                    (*A) = (*A) | val;
+                }
+            } else {
+                if(h == 0x8){
+                    uint8_t cy = getflag(0x4)?1:0;
+                    uint8_t carry = ((*A) + val + cy < 0) << 0x4;
+                    uint8_t zero = ((*A) + val + cy == 0) << 0x7;
+                    (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    (*A) = (*A) + val + cy;
+                } else if(h == 0x9){
+                    uint8_t cy = getflag(0x4)?1:0;
+                    uint8_t carry = ((*A) - val - cy < 0) << 0x4;
+                    uint8_t zero = ((*A) - val - cy == 0) << 0x7;
+                    (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    (*A) = (*A) - val - cy;
+                } else if(h == 0xA){
+                    uint8_t zero = ((*A) ^ val == 0) << 0x7;
+                    (*flags) = ((*flags) & (~0x80)) | zero;
+                    (*A) = (*A) ^ val;
+                } else if(h == 0xB){
+                    cmp((*A), val);
+                }
             }
         }
         // misc
@@ -280,12 +426,33 @@ void CPU::run(){
             }
             // jmp
             else if(h <= 0xD){
-                switch(l){
-                    case 0x3:
-                        uint16_t addr = mem->get(regs.PC.r16+1);
-                        addr += mem->get(regs.PC.r16+2)*0x100;
-                        regs.PC.r16 = addr;                        
-                    break;
+                if(l == 0x2 || l == 0xA){
+                    bool succ = jmp((h == 0xC)?CON_ZERO:CON_CARRY, false, l==0x2);
+                    ticks = succ?4:3;
+                }
+                if(l == 0x3){
+                    jmp(CON_NONE, false, false);                        
+                    ticks = 4;
+                }
+                if (l == 0x4 || l == 0xC){
+                    bool succ = jmp((h == 0xC)?CON_ZERO:CON_CARRY, true, l==0x4);
+                    ticks = succ?6:3;
+                }
+                if (l == 0xD){
+                    jmp(CON_NONE, true, false);                        
+                    ticks = 6;
+                }
+                if(l == 0 || l == 0x8){
+                    bool succ = ret((h==0xC)?CON_ZERO:CON_CARRY, l==0);
+                    ticks = (succ)?5:2;
+                }
+                if(l == 9){
+                    if(h == 0xC){
+                        ret(CON_NONE, false);
+                    } else {
+                        reti();
+                    }
+                    ticks = 4;
                 }
             } else {
                 if(l == 0x2 || l == 0x0){
@@ -301,6 +468,17 @@ void CPU::run(){
                 } 
                 if(l == 0x3){
                     IME = false;
+                    regs.PC.r16 += 1;
+                }
+                if(l == 0xA){
+                    uint16_t addr = mem->get(++regs.PC.r16);
+                    addr += mem->get(++regs.PC.r16)*0x100;    
+                    if(h == 0xE){
+                        mem->set(regs.AF.hl.r8h, addr);
+                    } else  {
+                        uint8_t val = mem->get(addr);
+                        regs.AF.hl.r8h = val;
+                    }
                     regs.PC.r16 += 1;
                 }
                 if(l == 0xB){

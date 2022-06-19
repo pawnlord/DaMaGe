@@ -1,8 +1,12 @@
 #include "../gbprocessor.h"
 
-int main(){
+int main(int argc, char** argv){
     Memory mem;
-    mem.load_cartridge("sml.gb");
+    if(argc == 1){
+        mem.load_cartridge("sml.gb");
+    } else {
+        mem.load_cartridge(argv[1]);    
+    }
     Clock clock(&mem);
     timereg_t *timereg = mem.timereg;
 //    timereg->TAC = 4;
