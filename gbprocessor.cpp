@@ -282,15 +282,16 @@ void CPU::run(){
             }
             if(l == 0x7){
                 if(h == 0x0){
-                    uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 7; // get last bit to keep
+                    uint8_t lastbit = (regs.AF.hl.r8h & 0x80) >> 7; // get last bit to keep
                     regs.AF.hl.r8h <<= 1;
                     regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | lastbit; 
+                    (*flags) = ((*flags) & ~0x10) | (lastbit<<4);
                 } else if(h == 0x1){
-                    uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 3; // get last bit to keep
-                    uint8_t carrybit = ((*flags) & 0x8) << 4; 
+                    uint8_t lastbit = (regs.AF.hl.r8h & 0x80) >> 3; // get last bit to keep
+                    uint8_t carrybit = ((*flags) & 0x10) >> 3; 
                     (*flags) = ((*flags) & ~0x10) | lastbit;
                     regs.AF.hl.r8h <<= 1;
-                    regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | carrybit;     
+                    regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x1) | carrybit;     
                 }
                 ticks = 1;
                 regs.PC.r16 += 1;
@@ -351,9 +352,10 @@ void CPU::run(){
                     uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 7; // get last bit to keep
                     regs.AF.hl.r8h >>= 1;
                     regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | lastbit; 
+                    (*flags) = ((*flags) & ~0x10) | (lastbit>>3);
                 } else if(h == 0x1){
-                    uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 3; // get last bit to keep
-                    uint8_t carrybit = ((*flags) & 0x8) << 4; 
+                    uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 4; // get last bit to keep
+                    uint8_t carrybit = ((*flags) & 0x10) << 4; 
                     (*flags) = ((*flags) & ~0x10) | lastbit;
                     regs.AF.hl.r8h >>= 1;
                     regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | carrybit;     
@@ -459,6 +461,7 @@ void CPU::run(){
                         push(regs.AF.r16);
                     break;
                 }
+                regs.PC.r16 += 1;
                 ticks = 4;
             }
             else if(l == 0x1){
@@ -476,6 +479,7 @@ void CPU::run(){
                         pop(&regs.AF.r16);
                     break;
                 }
+                regs.PC.r16 += 1;
                 ticks = 3;
             }
             else if(l == 0xF){
@@ -504,21 +508,25 @@ void CPU::run(){
                     bool succ = jmp((h == 0xC)?CON_ZERO:CON_CARRY, true, l==0x4);
                     ticks = succ?6:3;
                 }
-                if (l == 0xD){
-                    jmp(CON_NONE, true, false);                        
-                    ticks = 6;
-                }
                 if(l == 0 || l == 0x8){
                     bool succ = ret((h==0xC)?CON_ZERO:CON_CARRY, l==0);
                     ticks = (succ)?5:2;
                 }
-                if(l == 9){
+                if(l == 0x9){
                     if(h == 0xC){
                         ret(CON_NONE, false);
                     } else {
                         reti();
                     }
                     ticks = 4;
+                }
+                if(l == 0xB){
+                    ticks = prefixop(mem->get(++regs.PC.r16));
+                    regs.PC.r16+=1;
+                }
+                if(l == 0xD){
+                    jmp(CON_NONE, true, false);                        
+                    ticks = 6;
                 }
             } else {
                 if(l == 0x2 || l == 0x0){
@@ -551,6 +559,15 @@ void CPU::run(){
                     }
                     ticks = 2;
                     regs.PC.r16 += 1;
+                }
+                if(l == 0x9){
+                    if(h == 0xE){
+                        regs.PC.r16 = regs.HL.r16; 
+                        ticks = 1;
+                    } else {
+                        regs.SP.r16 = regs.HL.r16; 
+                        ticks = 2;
+                    }
                 }
                 if(l == 0xA){
                     uint16_t addr = mem->get(++regs.PC.r16);
@@ -587,17 +604,106 @@ void CPU::run(){
     }
 }
 
+int CPU::prefixop(uint8_t opcode){
+    regtype_e type;
+    gbreg* argreg = get_last_arg((opcode%0x10)%0x8, &type);
+    uint8_t* arg = (type == FULL)?mem->getref(argreg->r16):((type==HIGH)?&argreg->hl.r8h:&argreg->hl.r8l);
+    std::cout << arg << "\n";
+    int ticks = (type == FULL)?4:2;
+    if(opcode < 0x40){
+        bool isleft = (opcode/8)%2 == 0;
+        if(isleft){
+            uint8_t lastbit;
+            uint8_t carrybit;
+            uint8_t firstbit;
+            uint8_t h, l;
+            switch(opcode/0x10){
+                case 0:
+                    lastbit = ((*arg) & 0x80) >> 7; // get last bit to keep
+                    (*arg) <<= 1;
+                    (*arg) == ((*arg) & ~0x1) | lastbit; 
+                    (*flags) = ((*flags) & ~0x10) | (lastbit<<4);
+                break;
+                case 1:
+                    lastbit = ((*arg) & 0x80) >> 3; // get last bit to keep
+                    carrybit = ((*flags) & 0x10) << 4; 
+                    (*flags) = ((*flags) & ~0x10) | lastbit;
+                    (*arg) <<= 1;
+                    (*arg) == ((*arg) & ~0x1) | carrybit;     
+                break;
+                case 2:
+                    lastbit = ((*arg) & 0x80) >> 3; // get last bit to keep
+                    (*arg) <<= 1;
+                    (*arg) &= ~0x1; 
+                    (*flags) = ((*flags) & ~0x10) | lastbit;
+                break;
+                case 3:
+                    h = (*arg)/0x100;
+                    l = (*arg)%0x100;
+                    (*arg) = h + l*0x100;
+                break;
+            }
+        } else {
+            uint8_t lastbit;
+            uint8_t carrybit;
+            uint8_t firstbit;
+            switch(opcode/0x10){
+                case 0:
+                    lastbit = ((*arg) & 0x1) << 7; // get last bit to keep
+                    (*arg) >>= 1;
+                    (*arg) == ((*arg) & ~0x80) | lastbit; 
+                    (*flags) = ((*flags) & ~0x10) | (lastbit>>3);
+                break;
+                case 1:
+                    lastbit = ((*arg) & 0x1) << 4; // get last bit to keep
+                    carrybit = ((*flags) & 0x10) << 4; 
+                    (*flags) = ((*flags) & ~0x10) | lastbit;
+                    (*arg) >>= 1;
+                    (*arg) == ((*arg) & ~0x80) | carrybit;     
+                break;
+                case 2:
+                    lastbit = ((*arg) & 0x80); // get last bit to keep
+                    firstbit = ((*arg) & 0x1) << 4; // get last bit to keep
+                    (*arg) >>= 1;
+                    (*arg) == ((*arg) & ~0x80) | lastbit; 
+                    (*flags) = ((*flags) & ~0x10) | (firstbit);
+                break;
+                case 3:
+                    firstbit = ((*arg) & 0x1) << 4; // get last bit to keep
+                    (*arg) >>= 1;
+                    (*arg) == ((*arg) & ~0x80); 
+                    (*flags) = ((*flags) & ~0x10) | (firstbit);
+                break;
+            }
+        }
+    } else {
+        uint8_t bit = (opcode%0x40)/0x8;
+        if(opcode < 0x80){
+            int test = ((*arg) & (1<<bit)) > 0;
+            (*flags) = ((*flags) & ~(1<<7)) | (test<<7); 
+            if(ticks == 4){
+                ticks = 3;
+            }
+        } else if(opcode < 0xC0){
+            (*arg) |= (1<<bit);
+        } else if(opcode < 0xF0){
+            (*arg) &= ~(1<<bit);
+        }
+    }
+    return ticks;
+}
+
 void CPU::push(uint16_t dat){
     regs.SP.r16-=1;
-    mem->set(dat/0x10,regs.SP.r16);
+    mem->set(dat/0x100,regs.SP.r16);
     regs.SP.r16-=1;
-    mem->set(dat%0x10,regs.SP.r16);
+    mem->set(dat%0x100,regs.SP.r16);
 }
 
 void CPU::pop(uint16_t* dat){
     (*dat) = mem->get(regs.SP.r16);
     regs.SP.r16+=1;
-    (*dat) += mem->get(regs.SP.r16) * 0x10;
+    (*dat) += mem->get(regs.SP.r16) * 0x100;
     regs.SP.r16+=1;
 }
 

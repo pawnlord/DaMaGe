@@ -57,6 +57,7 @@ class CPU{
     bool jmp(condition_e con, bool isCall, bool isNot);
     bool ret(condition_e con, bool isNot);
     void reti();
+    int prefixop(uint8_t opcode);
     Memory *mem;
     Clock *clock;
     PPU *ppu;
