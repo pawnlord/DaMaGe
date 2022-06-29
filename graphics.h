@@ -23,6 +23,10 @@ struct Pixel : SDL_Rect{
     void set_color(int v);
 };
 
+struct MainLoop {
+    public:
+    virtual void update_gm_pixels(){}
+};
 
 class GraphicsManager{
     public:
@@ -40,6 +44,10 @@ class GraphicsManager{
 
     void stopSDL();
 
+    void add_loop(MainLoop* loop);
+
+    void set_pxl(int x, int y, int col);
+    void set_pxl(int x, int y, int r, int g, int b);
     private:
     int w, h;
     bool running = true;
@@ -48,5 +56,6 @@ class GraphicsManager{
     SDL_Renderer* ren;
     std::thread graphicsThread;
     std::vector<std::vector<Pixel> > pixs; 
+    MainLoop* loop;
 };
 #endif

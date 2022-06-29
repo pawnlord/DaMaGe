@@ -5,9 +5,13 @@
 #include <vector>
 #include <queue>
 #include "gbmem.h"
-#include "gbdisplay.h"
 #include <cmath>
 #include <algorithm>
+
+#define WIDTH 160
+#define HEIGHT 144
+
+typedef uint8_t **layer;
 
 
 struct object_t{
@@ -29,6 +33,8 @@ class PPU{
     public:
     PPU(Memory *mem);
     void tick();
+    //layer bg, window, objects;
+    layer lcd;
     private:
     void init_drawpxl();
     void updt_oamscan();
@@ -38,8 +44,6 @@ class PPU{
     bool getlcdc(int value);
 
     Memory *mem;
-    //layer bg, window, objects;
-    layer lcd;
     uint16_t *tile_ref;
     uint8_t *LCDC;
     uint8_t *STAT;

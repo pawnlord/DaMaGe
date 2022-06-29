@@ -45,9 +45,13 @@ class CPU{
     public:
     CPU(Memory *mem, Clock *clock);
     void run();
+    PPU *getppu();
     private:
     gbreg* get_first_arg(int lowbyte, regtype_e* ishigh);
     gbreg* get_last_arg(int lowbyte, regtype_e* ishigh);
+    void setbcdflags(uint8_t before, uint8_t after, bool issub);
+    void setbcddir(bool ishc, bool issub);
+    void clearbcd();
     bool tick(uint8_t cpu_cycles);
     void halt();
     void push(uint16_t dat);
@@ -65,6 +69,7 @@ class CPU{
     regs_t regs;
     // points to AF.r8l
     uint8_t *flags;
+    uint8_t *tempp;
 
     // interrupt logic
     // pointers to interrupt flags

@@ -15,7 +15,7 @@ public:
 private:
     void setbank2();
     char* externalmem;
-    int lowbankreg = 0, hibankreg = 0;
+    uint8_t lowbankreg = 0, hibankreg = 0;
     bool RAMEnabled = false;
     bool mode = false;
     int size;

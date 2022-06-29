@@ -53,8 +53,8 @@ class Memory{
     void reset_int(uint8_t flags);
     void reset_regs();
     MBC mbc;
-    private:
     uint8_t *raw_mem;
+    private:
     cart_info inf;
 };
 

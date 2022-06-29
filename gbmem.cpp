@@ -7,6 +7,7 @@ void print_cart_info(cart_info* inf) {
 
 Memory::Memory(){
     raw_mem = (uint8_t*) malloc(sizeof(uint8_t) * 0x10000);
+    memset(raw_mem, 0, 0x10000);
     timereg = (timereg_t*)(raw_mem+0xFF04); // registers for dividers and timers 
 }
 
@@ -59,7 +60,7 @@ void Memory::reset_regs(){
 }
 
 uint8_t Memory::get(uint16_t addr){
-    if(addr <= 0x7FFF || (addr >= 0xA00 && addr <= 0xBFFF)){
+    if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
         return mbc.get(addr);
     }
     return raw_mem[addr];
@@ -70,7 +71,7 @@ uint8_t& Memory::operator[](int idx){
 }
 
 void Memory::set(uint8_t v, uint16_t addr){
-    if(addr <= 0x7FFF || (addr >= 0xA00 && addr <= 0xBFFF)){
+    if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
         mbc.set(addr, v);
     } else if(addr <= 0xFFFF){
         raw_mem[addr] = v;

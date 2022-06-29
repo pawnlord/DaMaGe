@@ -1,5 +1,31 @@
 #include "gbprocessor.h"
 
+
+void CPU::setbcdflags(uint8_t before, uint8_t after, bool issub){
+    (*flags) = ((*flags) & ~(1<<6)) | ((issub?1:0)<<6);
+    if(issub){
+        if((before & (1<<3)) > 0 && (after & (1<<3)) == 0){
+            (*flags) |= 1<<5;
+        } else {
+            (*flags) &= ~(1<<5);
+        }
+    } else {
+        if((before & (1<<3)) == 0 && (after & (1<<3)) > 0){
+            (*flags) |= 1<<5;
+        } else {
+            (*flags) &= ~(1<<5);
+        }
+    }
+}
+void CPU::setbcddir(bool ishc, bool issub){
+    (*flags) = ((*flags) & ~(1<<6)) | ((issub?1:0)<<6);
+    (*flags) = ((*flags) & ~(1<<5)) | ((ishc?1:0)<<5);
+}
+
+void CPU::clearbcd(){
+    (*flags) = ((*flags) & ~(0b11<<5)); 
+}
+
 gbreg& gbreg::operator=(const uint16_t a){
     this->r16 = a;
     return *this;
@@ -21,6 +47,10 @@ CPU::CPU(Memory *mem, Clock*clock){
     halt_flag = false;
     IE = mem->getref(0xFFFF);
     IF = mem->getref(0xFF0F);
+    tempp = mem->raw_mem;
+}
+PPU *CPU::getppu(){
+    return ppu;
 }
 
 void CPU::halt(){
@@ -122,6 +152,7 @@ bool CPU::getflag(int flag){
 
 void CPU::cmp(int a, int b){
     int cmpn = a - b;
+    setbcdflags(a, a-b, true);
     if(cmpn > 0){
         (*flags) &= ~(0x1<<0x7); // ZERO flag 
         (*flags) &= ~(0x1<<0x4); // CARRY flag 
@@ -170,9 +201,6 @@ void CPU::reti(){
 void CPU::run(){
     static uint32_t temp = 0;
     while(true){
-        if(mem->mbc.full[0xFFF3] == 0){
-            std::cout << "breakpoint\n";
-        }
         uint8_t opcode = mem->get(regs.PC.r16);
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
         if(debug){
@@ -241,27 +269,33 @@ void CPU::run(){
                 ticks = 2;
             }
             if(l == 0x4 || l == 0xC){
-                uint8_t val;
+                uint8_t val, start;
                 if(ishigh != FULL){
-                    val = getval(firstarg, ishigh)+1;
+                    start = getval(firstarg, ishigh);
+                    val = start+1;
                     setval(firstarg, ishigh, val);    
                 } else {
-                    val = mem->get(firstarg->r16)+1;
+                    start = mem->get(firstarg->r16);
+                    val = start+1;
                     mem->set(val, firstarg->r16);
                 }
+                setbcdflags(start, val, false);
                 regs.PC.r16 += 1;
                 ticks = 1;
                 (*flags) = (val == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
             }
             if(l == 0x5 || l == 0xD){
-                uint8_t val;
+                uint8_t val, start;
                 if(ishigh != FULL){
-                    val = getval(firstarg, ishigh)-1;
+                    start = getval(firstarg, ishigh);
+                    val = start-1;
                     setval(firstarg, ishigh, val);    
                 } else {
-                    val = mem->get(firstarg->r16)-1;
+                    start = mem->get(firstarg->r16)-1;
+                    val = start-1;
                     mem->set(val, firstarg->r16);
                 }    
+                setbcdflags(start, val, true);
                 regs.PC.r16 += 1;
                 ticks = 1;
                 (*flags) = (val == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
@@ -292,6 +326,29 @@ void CPU::run(){
                     (*flags) = ((*flags) & ~0x10) | lastbit;
                     regs.AF.hl.r8h <<= 1;
                     regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x1) | carrybit;     
+                } else if (h == 0x2){
+                    uint8_t *A = &regs.AF.hl.r8h;
+                    // credit: https://forums.nesdev.org/viewtopic.php?p=196282&sid=42ad7984120d6eb63b476586dc5eccaa#p196282
+                    if (!getflag(6)) { 
+                        if (getflag(4) || (*A) > 0x99) { 
+                            (*A) += 0x60; 
+                            (*flags) |= 1<<4; 
+                        }
+                        if (getflag(5) || ((*A) & 0x0f) > 0x09) { 
+                            (*A) += 0x6; 
+                        }
+                    } else { 
+                        if (getflag(4)) {
+                            (*A) -= 0x60; 
+                        }
+                        if (getflag(5)) { 
+                            (*A) -= 0x6; 
+                        }
+                    }
+                    (*flags) = ((*flags) & ~(1<<7)) | ((*A) == 0)?1<<7:0; 
+                    (*flags) &= ~(1<<5); 
+                } else if (h == 0x3){
+                    (*flags) |= 1<<4;                    
                 }
                 ticks = 1;
                 regs.PC.r16 += 1;
@@ -321,9 +378,10 @@ void CPU::run(){
                     firstarg = &regs.SP;
                 }
                 uint16_t val = getval(firstarg, FULL);
-                uint8_t carry = ((regs.HL.r16) + val < 0) << 0x4;
+                uint8_t carry = ((regs.HL.r16) + val > 0xFF) << 0x4;
                 uint8_t zero = ((regs.HL.r16) + val == 0) << 0x7;
                 (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                setbcdflags(regs.HL.r16, regs.HL.r16+val, false);
                 regs.HL.r16 = regs.HL.r16 + val;
                 regs.PC.r16+=1;
             }
@@ -359,6 +417,13 @@ void CPU::run(){
                     (*flags) = ((*flags) & ~0x10) | lastbit;
                     regs.AF.hl.r8h >>= 1;
                     regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | carrybit;     
+                } else if (h == 0x2){
+                    uint8_t *A = &regs.AF.hl.r8h;
+                    (*A) = (*A) ^ 0xFF;
+                    setbcddir(true, true);
+                } else if (h == 0x3){
+                    (*flags) ^= (1<<0x4);                    
+                    setbcddir(false, false);
                 }
                 ticks = 1;
                 regs.PC.r16 += 1;
@@ -403,40 +468,47 @@ void CPU::run(){
             int val = (ishigh==FULL)?mem->get(getval(arg, FULL)):(int)getval(arg, ishigh);
             if(l <= 7){
                 if(h == 0x8){
-                    uint8_t carry = ((*A) + val < 0) << 0x4;
+                    uint8_t carry = ((*A) + val > 0xFF) << 0x4;
                     uint8_t zero = ((*A) + val == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    setbcdflags((*A), (*A) + val, false);
                     (*A) = (*A) + val;
                 } else if(h == 0x9){
                     uint8_t carry = ((*A) - val < 0) << 0x4;
                     uint8_t zero = ((*A) - val == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    setbcdflags((*A), (*A) - val, true);
                     (*A) = (*A) - val;
                 } else if(h == 0xA){
                     uint8_t zero = ((*A) & val == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x80)) | zero;
+                    setbcddir(true, false);
                     (*A) = (*A) & val;
                 } else if(h == 0xB){
                     uint8_t zero = ((*A) | val == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x80)) | zero;
+                    setbcddir(false, false);
                     (*A) = (*A) | val;
                 }
             } else {
                 if(h == 0x8){
                     uint8_t cy = getflag(0x4)?1:0;
-                    uint8_t carry = ((*A) + val + cy < 0) << 0x4;
+                    uint8_t carry = ((*A) + val + cy > 0xFF) << 0x4;
                     uint8_t zero = ((*A) + val + cy == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    setbcdflags((*A), (*A) + val + cy, false);
                     (*A) = (*A) + val + cy;
                 } else if(h == 0x9){
                     uint8_t cy = getflag(0x4)?1:0;
                     uint8_t carry = ((*A) - val - cy < 0) << 0x4;
                     uint8_t zero = ((*A) - val - cy == 0) << 0x7;
+                    setbcdflags((*A), (*A) - val - cy, true);
                     (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
                     (*A) = (*A) - val - cy;
                 } else if(h == 0xA){
                     uint8_t zero = ((*A) ^ val == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x80)) | zero;
+                    setbcddir(false, false);
                     (*A) = (*A) ^ val;
                 } else if(h == 0xB){
                     cmp((*A), val);
@@ -508,6 +580,24 @@ void CPU::run(){
                     bool succ = jmp((h == 0xC)?CON_ZERO:CON_CARRY, true, l==0x4);
                     ticks = succ?6:3;
                 }
+                if(l == 0x6){
+                    uint8_t* A = &regs.AF.hl.r8h;
+                    uint8_t u8 = mem->get(++regs.PC.r16), carry, zero;
+                    uint8_t start = (*A);
+                    if(h == 0xC){
+                        carry = ((*A) + u8 > 0xFF) << 0x4;
+                        zero = ((*A) + u8 == 0) << 0x7;
+                        (*A) = (*A) + u8;
+                    } else {
+                        carry = ((*A) - u8 < 0) << 0x4;
+                        zero = ((*A) - u8 == 0) << 0x7;
+                        (*A) = (*A) - u8;    
+                    }
+                    setbcdflags(start, (*A), h==0xD);
+                    (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    regs.PC.r16 += 1;
+                    ticks = 2;
+                }
                 if(l == 0 || l == 0x8){
                     bool succ = ret((h==0xC)?CON_ZERO:CON_CARRY, l==0);
                     ticks = (succ)?5:2;
@@ -527,6 +617,25 @@ void CPU::run(){
                 if(l == 0xD){
                     jmp(CON_NONE, true, false);                        
                     ticks = 6;
+                }
+                if(l == 0xE){
+                    uint8_t* A = &regs.AF.hl.r8h;
+                    uint8_t cy = getflag(0x4)?1:0;
+                    uint8_t u8 = mem->get(++regs.PC.r16), carry, zero;
+                    uint8_t start = (*A);
+                    if(h == 0xC){
+                        carry = ((*A) + u8 + cy > 0xFF) << 0x4;
+                        zero = ((*A) + u8 + cy == 0) << 0x7;
+                        (*A) = (*A) + u8 + cy;
+                    } else {
+                        carry = ((*A) - u8 - cy < 0) << 0x4;
+                        zero = ((*A) - u8 - cy == 0) << 0x7;
+                        (*A) = (*A) - u8 - cy;    
+                    }
+                    setbcdflags(start, (*A), h==0xD);
+                    (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
+                    regs.PC.r16 += 1;
+                    ticks = 2;
                 }
             } else {
                 if(l == 0x2 || l == 0x0){
@@ -549,15 +658,31 @@ void CPU::run(){
                     if(h == 0xF){
                         regs.AF.hl.r8h = regs.AF.hl.r8h | n;
                         if(regs.AF.hl.r8h == 0){
-                            (*flags) &= (0x1<<0x7); // ZERO flag
+                            (*flags) |= (0x1<<0x7); // ZERO flag
                         }
+                        setbcddir(true, false);
                     } else {
                         regs.AF.hl.r8h = regs.AF.hl.r8h & n;
                         if(regs.AF.hl.r8h == 0){
-                            (*flags) &= (0x1<<0x7); // ZERO flag
+                            (*flags) |= (0x1<<0x7); // ZERO flag
                         }
+                        setbcddir(false, false);
                     }
                     ticks = 2;
+                    regs.PC.r16 += 1;
+                }
+                if(l == 0x8){
+                    int8_t i8 = (int8_t)mem->get(++regs.PC.r16);
+                    if(h == 0xE){
+                        setbcdflags(regs.SP.r16, regs.SP.r16 + i8, false);
+                        regs.SP.r16 += i8; 
+                        ticks = 2;
+                    } else {
+                        setbcdflags(regs.HL.r16, regs.SP.r16 + i8, false);
+                        regs.HL.r16 = regs.SP.r16 + i8;
+                        ticks = 2;
+                    }
+                    (*flags) &= ~(1<<7);
                     regs.PC.r16 += 1;
                 }
                 if(l == 0x9){
@@ -593,6 +718,7 @@ void CPU::run(){
                         if(regs.AF.hl.r8h == 0){
                             (*flags) &= (0x1<<0x7); // ZERO flag
                         }
+                        setbcddir(false, false);
                     }
                     ticks = 2;
                     regs.PC.r16 += 1;
@@ -608,7 +734,6 @@ int CPU::prefixop(uint8_t opcode){
     regtype_e type;
     gbreg* argreg = get_last_arg((opcode%0x10)%0x8, &type);
     uint8_t* arg = (type == FULL)?mem->getref(argreg->r16):((type==HIGH)?&argreg->hl.r8h:&argreg->hl.r8l);
-    std::cout << arg << "\n";
     int ticks = (type == FULL)?4:2;
     if(opcode < 0x40){
         bool isleft = (opcode/8)%2 == 0;
@@ -676,6 +801,7 @@ int CPU::prefixop(uint8_t opcode){
                 break;
             }
         }
+        setbcddir(false, false);
     } else {
         uint8_t bit = (opcode%0x40)/0x8;
         if(opcode < 0x80){
@@ -684,6 +810,7 @@ int CPU::prefixop(uint8_t opcode){
             if(ticks == 4){
                 ticks = 3;
             }
+            setbcddir(true, false);
         } else if(opcode < 0xC0){
             (*arg) |= (1<<bit);
         } else if(opcode < 0xF0){

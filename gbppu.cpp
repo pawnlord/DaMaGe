@@ -17,6 +17,11 @@ PPU::PPU(Memory *mem){
     this->SCY = mem->getref(0xFF42);
     this->WX = mem->getref(0xFF4B);
     this->WY = mem->getref(0xFF4A);
+    this->lcd = (layer)malloc(WIDTH*sizeof(uint8_t*));
+    for(int i = 0; i < WIDTH; i++){
+        lcd[i] = (uint8_t*)malloc(HEIGHT);
+        memset(lcd[i], 0, HEIGHT);
+    } 
 }
 
 
@@ -90,7 +95,7 @@ void PPU::updt_oamscan(){
 }
 
 void PPU::pxl_fetcher(){
-        static enum state_e{GET_TILE = 0, GET_LOW, GET_HIGH, SLEEP, PUSH, SPRITE} state = GET_TILE;
+    static enum state_e{GET_TILE = 0, GET_LOW, GET_HIGH, SLEEP, PUSH, SPRITE} state = GET_TILE;
     static enum spstate_e{ADVANCE, RETRIEVE, PUSH_SPRITE} spstate = ADVANCE;
     static bool isAdvance = false;
     static uint8_t tile;
@@ -99,7 +104,7 @@ void PPU::pxl_fetcher(){
     static object_t curr_sprite;
     // BG/Win
     if(state == GET_TILE) {
-        isWin = (*LY) >= (*WY) && fetchX >= (*WX)-7;
+        isWin = (*LY) >= (*WY) && fetchX >= (*WX)-7 && getlcdc(5);
         uint16_t tilemap, fetcherX, fetcherY;
         tilemap = 0x9800;
         if((isWin && getlcdc(6)) || (!isWin && getlcdc(3))){
@@ -121,7 +126,7 @@ void PPU::pxl_fetcher(){
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_HIGH){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
-        uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + (((*LY)/8) ) + 1 : 0x9000 + ((int)tile)*16 + row*2 + 1;
+        uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + 1 : 0x9000 + ((int)tile)*16 + row*2 + 1;
         tilehigh = mem->get(tiledata);
         state = (state_e)(((int)state) + 1);
     } else if(state == SLEEP){
@@ -129,15 +134,18 @@ void PPU::pxl_fetcher(){
     } else if(state == PUSH){
         if(bgfifo.size() < 16){
             uint16_t fulltile = tilelow + (tilehigh*0x100);
+            if(fulltile != 0){
+                std::cout << "Non zero tile\n";
+            }
             for(int i = 0; i < 8; i++){
-                uint8_t pixel_raw = fulltile & (0b11 << (i*2));
+                uint8_t pixel_raw = (fulltile & (0b11 << (i*2))) >> (i*2);
                 pixel_t pxl = {pixel_raw, 0, 0};
                 bgfifo.push(pxl);
             }
             for(int i = 0; i < lineobjs; i++){
                 if(((fetchedobjs[i].x-8) > fetchX && (fetchedobjs[i].x-8) < fetchX+8) || 
                     ((fetchedobjs[i].x) > fetchX && (fetchedobjs[i].x) < fetchX+8)) {
-                        state = SPRITE; // We need to parse a spriet
+                        state = SPRITE; // We need to parse a sprite
                         spstate = ADVANCE;
                         curr_sprite = fetchedobjs[i];
                         break;
@@ -157,6 +165,7 @@ void PPU::pxl_fetcher(){
             }
         }
     } else if(state == SPRITE){
+        std::cout << "parsing sprite\n";
         if(spstate == ADVANCE){
             if(!isAdvance){
                 isAdvance = true;
@@ -179,16 +188,16 @@ void PPU::pxl_fetcher(){
             }
             uint16_t fulltile = tilelow + (tilehigh*0x100);
             std::queue<pixel_t> new_fgfifo;            
-            for(int i = 0; i < std::max(0, curr_sprite.x - fetchX); i++){
+            for(int i = 0; i < std::max(0, (curr_sprite.x - 8) - fetchX); i++){
                 new_fgfifo.push(temp);
             }
-            for(int i = std::max(0, curr_sprite.x - fetchX); i < std::min(fetchX - curr_sprite.x, 8); i++){
-                uint8_t pixel_raw = fulltile & (0b11 << (i*2));                
+            for(int i = std::max(0, (curr_sprite.x - 8) - fetchX); i < std::min(fetchX - (curr_sprite.x - 8), 8); i++){
+                uint8_t pixel_raw = (fulltile & (0b11 << (i*2))) >> (i*2);                
                 pixel_t pxl = {pixel_raw, (uint8_t)(curr_sprite.flag&(1<<4)), (uint8_t)(curr_sprite.flag&(1<<7))};
                 new_fgfifo.push(pxl);
             }
             std::queue<pixel_t> combined_fifo;
-            for(int i = 0; i < std::min(fetchX - curr_sprite.x, 8); i++){
+            for(int i = 0; i < std::min(fetchX - (curr_sprite.x - 8), 8); i++){
                 pixel_t old_pxl = fgfifo.front();
                 fgfifo.pop();
                 pixel_t new_pxl = new_fgfifo.front();
@@ -232,7 +241,7 @@ void PPU::updt_drawpxl(){
                 lcd[i][(*LY)] = 0;
             }
         }
-        for(int i = 0; i < 8; i++){
+        for(int i = 0; i < std::min(160-displayX, 8); i++){
             pixel_t bg_pxl = bgfifo.front();
             bgfifo.pop();
             pixel_t fg_pxl = fgfifo.front();

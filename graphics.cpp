@@ -62,10 +62,32 @@ void GraphicsManager::add_sprite(std::vector<std::vector<int> > pixels, int x, i
         }
     }
 }
+void GraphicsManager::set_pxl(int x, int y, int col){
+    if(x < pixs.size() && y < pixs[0].size()){
+        this->pixs[x][y].set_color(col);
+    }
+}
+void GraphicsManager::set_pxl(int x, int y, int r, int g, int b){
+    this->pixs[x][y].set_color(r, g, b);
+}
+
 
 void GraphicsManager::render_cb(){
+    SDL_Event evt;
     while(running){
-        this->runmx.lock();
+        this->runmx.lock();    
+        while( SDL_PollEvent(&evt) ) {
+            switch(evt.type) {
+                case SDL_QUIT:
+                    std::cout << "QUIT\n";
+                    running = false;   
+                break;
+            }
+        }
+
+
+        // update pixels
+        this->loop->update_gm_pixels();
         // Pixel renderer
         SDL_RenderClear(ren);
         for(int i = 0; i < w; i++){
@@ -100,3 +122,7 @@ void GraphicsManager::start(){
     graphicsThread = std::thread(&GraphicsManager::render_cb, this);
 }
 
+
+void GraphicsManager::add_loop(MainLoop* mainloop){
+    this->loop = mainloop;
+}
