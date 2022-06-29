@@ -2,9 +2,12 @@
 #define GBPPU_H
 #include <cstdint>
 #include <cmath>
+#include <vector>
 #include <queue>
 #include "gbmem.h"
 #include "gbdisplay.h"
+#include <cmath>
+#include <algorithm>
 
 
 struct object_t{
@@ -12,7 +15,9 @@ struct object_t{
     uint8_t x;
     uint8_t idx;
     uint8_t flag;
+    bool operator==(const object_t& rhs);
 };
+
 
 struct pixel_t{
     uint8_t color;
@@ -25,24 +30,29 @@ class PPU{
     PPU(Memory *mem);
     void tick();
     private:
+    void init_drawpxl();
     void updt_oamscan();
     void updt_drawpxl();
+    void pxl_fetcher();
     bool setlcdc(int value);
     bool getlcdc(int value);
 
     Memory *mem;
-    layer bg, window, objects;
-    
+    //layer bg, window, objects;
+    layer lcd;
     uint16_t *tile_ref;
     uint8_t *LCDC;
     uint8_t *STAT;
+    bool is_paused = false, is_render_ready = false;
+    uint8_t lineobjs = 0;
+    uint8_t totalobjs = 0;
    
     object_t *OAM;
-
+    std::vector<object_t> fetchedobjs;
+    std::queue<pixel_t> fgfifo, bgfifo;
     enum mode_e {M0 = 0, M1, M2, M3} mode;
-    std::queue<pixel_t> fifo;
     int dots = 0;
-    uint8_t *LY, *LYC;
+    uint8_t *LY, *LYC, *SCX, *SCY, *WX, *WY, fetchX = 0, displayX = 0;
 };
 
 
