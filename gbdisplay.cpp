@@ -7,14 +7,15 @@ GameboyDisplay::GameboyDisplay(PPU* ppu)
 }
 
 void GameboyDisplay::update_gm_pixels(){
-    if(memcmp(last_lcd, ppu->lcd, sizeof(last_lcd))){
-        int col;
-        for(int i = 0; i < WIDTH; i++){
-            for(int j = 0; j < HEIGHT; j++){
-                col = 255 * ((3.0-(float)(ppu->lcd[i][j]))/3);                
-                gm.set_pxl(i, j, col);
-            }
+    static int test = 1;
+    int col;
+    for(int i = 0; i < WIDTH; i++){
+        for(int j = 0; j < HEIGHT; j++){
+            col = 255 * ((3.0-(float)(ppu->lcd[i][j]))/3);                
+            if(test == j) {col = 0;}
+            gm.set_pxl(i, j, col);
         }
-        memcpy(&last_lcd, &(ppu->lcd), sizeof(last_lcd));
     }
+    test += 1;
+    test %= HEIGHT;
 }

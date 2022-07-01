@@ -71,6 +71,9 @@ uint8_t& Memory::operator[](int idx){
 }
 
 void Memory::set(uint8_t v, uint16_t addr){
+    if(addr >= 0x8200 && addr <= 0x8800){
+        std::cout << "vram access" << std::endl;
+    }
     if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
         mbc.set(addr, v);
     } else if(addr <= 0xFFFF){

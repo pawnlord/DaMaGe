@@ -43,7 +43,7 @@ void PPU::tick(){
         
         // Interrupts
         if((*LY) == (*LYC)){
-            (*STAT) != 1<<0x2; // set LYC=LY
+            (*STAT) |= 1<<0x2; // set LYC=LY
             if(((*STAT) & 0x1<<6) > 0){
                 if(mem->get_int_enabled(0x2))
                     mem->req_int(0x2);
@@ -63,7 +63,6 @@ void PPU::tick(){
     } else if (mode == M3){
         updt_drawpxl();
     }
-    pxl_fetcher();
 }
 
 
@@ -126,7 +125,7 @@ void PPU::pxl_fetcher(){
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_HIGH){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
-        uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + 1 : 0x9000 + ((int)tile)*16 + row*2 + 1;
+        uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + (((*LY)/8) ) + 1 : 0x9000 + ((int)tile)*16 + row*2 + 1;
         tilehigh = mem->get(tiledata);
         state = (state_e)(((int)state) + 1);
     } else if(state == SLEEP){
@@ -134,9 +133,6 @@ void PPU::pxl_fetcher(){
     } else if(state == PUSH){
         if(bgfifo.size() < 16){
             uint16_t fulltile = tilelow + (tilehigh*0x100);
-            if(fulltile != 0){
-                std::cout << "Non zero tile\n";
-            }
             for(int i = 0; i < 8; i++){
                 uint8_t pixel_raw = (fulltile & (0b11 << (i*2))) >> (i*2);
                 pixel_t pxl = {pixel_raw, 0, 0};
@@ -165,7 +161,6 @@ void PPU::pxl_fetcher(){
             }
         }
     } else if(state == SPRITE){
-        std::cout << "parsing sprite\n";
         if(spstate == ADVANCE){
             if(!isAdvance){
                 isAdvance = true;

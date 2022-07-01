@@ -46,6 +46,7 @@ class CPU{
     CPU(Memory *mem, Clock *clock);
     void run();
     PPU *getppu();
+    void print_info();
     private:
     gbreg* get_first_arg(int lowbyte, regtype_e* ishigh);
     gbreg* get_last_arg(int lowbyte, regtype_e* ishigh);

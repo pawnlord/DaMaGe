@@ -74,6 +74,13 @@ void GraphicsManager::set_pxl(int x, int y, int r, int g, int b){
 
 void GraphicsManager::render_cb(){
     SDL_Event evt;
+    
+    // Initialize SDL in the same thread we check for events
+    win = SDL_CreateWindow(name.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w*s, h*s+head, SDL_WINDOW_SHOWN);
+    sdl_check_loud((void*) win);    
+    ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    sdl_check_loud((void*) ren);
+    
     while(running){
         this->runmx.lock();    
         while( SDL_PollEvent(&evt) ) {
@@ -104,10 +111,11 @@ void GraphicsManager::render_cb(){
 }
 
 GraphicsManager::GraphicsManager(std::string name, int w, int h, int s, int head){
-    win = SDL_CreateWindow(name.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w*s, h*s+head, SDL_WINDOW_SHOWN);
-    sdl_check_loud((void*) win);    
-    ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    sdl_check_loud((void*) ren);
+    
+    this->s = s;
+    this->head = head;
+    this->head = head;
+    this->name = name;
     this->w = w;
     this->h = h;
     for(int i = 0; i < w; i++){

@@ -49,7 +49,8 @@ class GraphicsManager{
     void set_pxl(int x, int y, int col);
     void set_pxl(int x, int y, int r, int g, int b);
     private:
-    int w, h;
+    int w, h, s, head;
+    std::string name;
     bool running = true;
     std::mutex runmx;
     SDL_Window* win;

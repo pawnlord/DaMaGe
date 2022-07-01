@@ -36,13 +36,13 @@ CPU::CPU(Memory *mem, Clock*clock){
     this->clock = clock;
     ppu = new PPU(mem);
     regs.PC = 0x100;
-    regs.AF.hl.r8h = 0x1;
-    regs.BC = 0x13;
-    regs.DE = 0xC1;
-    regs.HL = 0x8403;
+    regs.AF.hl.r8h = 0x11;
+    regs.BC = 0x00;
+    regs.DE = 0xFF56;
+    regs.HL = 0x000D;
     regs.SP = 0xFFFE;
     flags = &regs.AF.hl.r8l;
-    (*flags) = 0b1011;
+    (*flags) = 0x80;
     IME = true;
     halt_flag = false;
     IE = mem->getref(0xFFFF);
@@ -203,11 +203,13 @@ void CPU::run(){
     while(true){
         uint8_t opcode = mem->get(regs.PC.r16);
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
+        temp = regs.PC.r16;
         if(debug){
             temp += 1;
             cycles_to_run -= 1;
             if(cycles_to_run == 0){
-                std::cout << regs.PC.r16 << " " << (int)opcode << "\n";
+                print_info();
+                std::cout << regs.PC.r16 << " " << (int)opcode << "(" << (int)mem->get(regs.PC.r16+1) << "," << (int)mem->get(regs.PC.r16+2) <<  ")" << "\n";
                 std::cin >> cycles_to_run;
                 if(cycles_to_run == -1){
                     cycles_to_run = 1;
@@ -363,7 +365,7 @@ void CPU::run(){
                     regs.PC.r16 += 1;    
                 } else {
                     int8_t offset = (mem->get(++regs.PC.r16));
-                    uint16_t addr = regs.PC.r16;
+                    uint16_t addr = regs.PC.r16+offset;
                     ticks = 2;
                     if(h == 0x1 || (h == 0x2 && (getflag(0x7))) 
                                 || (h == 0x3 && (getflag(0x7)))){ // JR
@@ -433,19 +435,20 @@ void CPU::run(){
         // Load
         else if(h >= 0x4 && h <= 0x7){
             regs.PC.r16 += 1;
-            if(opcode == 0x77){
+            if(opcode == 0x76){
                 halt();
             } else {
                 regtype_e ftype, stype;
                 gbreg *farg, *sarg;
                 farg = get_first_arg(opcode, &ftype);
                 sarg = get_last_arg(l%0x8, &stype);
-                if(l == 0x6 || l == 0xE){
+                if(l == 0x6 || l == 0xE || h == 0x7){
                     ticks = 2;
                 } else{
                     ticks = 1;
                 }
                 uint8_t val = (stype == FULL)? mem->get(getval(sarg, FULL)) : getval(sarg, stype);
+                
                 if(ftype != FULL){
                     setval(farg, ftype, val);
                 } else {
@@ -480,12 +483,12 @@ void CPU::run(){
                     setbcdflags((*A), (*A) - val, true);
                     (*A) = (*A) - val;
                 } else if(h == 0xA){
-                    uint8_t zero = ((*A) & val == 0) << 0x7;
+                    uint8_t zero = (((*A) & val) == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x80)) | zero;
                     setbcddir(true, false);
                     (*A) = (*A) & val;
                 } else if(h == 0xB){
-                    uint8_t zero = ((*A) | val == 0) << 0x7;
+                    uint8_t zero = (((*A) | val) == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x80)) | zero;
                     setbcddir(false, false);
                     (*A) = (*A) | val;
@@ -506,7 +509,7 @@ void CPU::run(){
                     (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
                     (*A) = (*A) - val - cy;
                 } else if(h == 0xA){
-                    uint8_t zero = ((*A) ^ val == 0) << 0x7;
+                    uint8_t zero = (((*A) ^ val) == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x80)) | zero;
                     setbcddir(false, false);
                     (*A) = (*A) ^ val;
@@ -571,6 +574,7 @@ void CPU::run(){
                 if(l == 0x2 || l == 0xA){
                     bool succ = jmp((h == 0xC)?CON_ZERO:CON_CARRY, false, l==0x2);
                     ticks = succ?4:3;
+                    if(!succ){regs.PC.r16 += 1;}
                 }
                 if(l == 0x3){
                     jmp(CON_NONE, false, false);                        
@@ -579,6 +583,7 @@ void CPU::run(){
                 if (l == 0x4 || l == 0xC){
                     bool succ = jmp((h == 0xC)?CON_ZERO:CON_CARRY, true, l==0x4);
                     ticks = succ?6:3;
+                    if(!succ){regs.PC.r16 += 1;}
                 }
                 if(l == 0x6){
                     uint8_t* A = &regs.AF.hl.r8h;
@@ -601,6 +606,7 @@ void CPU::run(){
                 if(l == 0 || l == 0x8){
                     bool succ = ret((h==0xC)?CON_ZERO:CON_CARRY, l==0);
                     ticks = (succ)?5:2;
+                    if(!succ){regs.PC.r16 += 1;}
                 }
                 if(l == 0x9){
                     if(h == 0xC){
@@ -692,6 +698,7 @@ void CPU::run(){
                     } else {
                         regs.SP.r16 = regs.HL.r16; 
                         ticks = 2;
+                        regs.PC.r16+=1;
                     }
                 }
                 if(l == 0xA){
@@ -725,7 +732,6 @@ void CPU::run(){
                 }
             }
         }
-
         tick(ticks);
     }
 }
@@ -825,6 +831,9 @@ void CPU::push(uint16_t dat){
     mem->set(dat/0x100,regs.SP.r16);
     regs.SP.r16-=1;
     mem->set(dat%0x100,regs.SP.r16);
+    if((mem->get(regs.SP.r16) + mem->get(regs.SP.r16+1)*0x100) != dat){
+        std::cout << "oh no" << std::endl;
+    }
 }
 
 void CPU::pop(uint16_t* dat){
@@ -832,6 +841,10 @@ void CPU::pop(uint16_t* dat){
     regs.SP.r16+=1;
     (*dat) += mem->get(regs.SP.r16) * 0x100;
     regs.SP.r16+=1;
+    
+    if((mem->get(regs.SP.r16-2) + mem->get(regs.SP.r16-1)*0x100) != (*dat)){
+        std::cout << "oh no" << std::endl;
+    }
 }
 
 bool CPU::tick(uint8_t cpu_cycles){
@@ -888,4 +901,13 @@ void Clock::tick(){
     }
     count %= 4194304; // cycles per second 
     // TODO: Possibly delay here.
+}
+void CPU::print_info(){
+    std::cout << std::hex << "A: " << (int)(regs.AF.hl.r8h) << " F: " << (int)(regs.AF.hl.r8l) << " (AF " << regs.AF.r16 << ")\n"; 
+    std::cout << std::hex << "B: " << (int)(regs.BC.hl.r8h) << " C: " << (int)(regs.BC.hl.r8l) << " (BC " << regs.BC.r16 << ")\n"; 
+    std::cout << std::hex << "D: " << (int)(regs.DE.hl.r8h) << " E: " << (int)(regs.DE.hl.r8l) << " (DE " << regs.DE.r16 << ")\n"; 
+    std::cout << std::hex << "H: " << (int)(regs.HL.hl.r8h) << " L: " << (int)(regs.HL.hl.r8l) << " (HL " << regs.HL.r16 << ")\n"; 
+    std::cout << "PC: " << regs.PC.r16 << " SP:" << regs.SP.r16 << "\n"; 
+    std::cout << "[" << (((*flags)&1<<7)?"Z":"-") << (((*flags)&1<<6)?"N":"-") << (((*flags)&1<<5)?"H":"-") << (((*flags)&1<<4)?"C":"-") << "]" << std::endl; 
+
 }
