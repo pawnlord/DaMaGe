@@ -142,7 +142,7 @@ void setval(gbreg* r, regtype_e t, int val){
     } else if(t == LOW){
         r->hl.r8l = (uint8_t)val;    
     } else {
-        r->r16 = (uint8_t)val;
+        r->r16 = (uint16_t)val;
     }
 }
 
@@ -203,7 +203,6 @@ void CPU::run(){
     while(true){
         uint8_t opcode = mem->get(regs.PC.r16);
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
-        temp = regs.PC.r16;
         if(debug){
             temp += 1;
             cycles_to_run -= 1;
@@ -249,7 +248,7 @@ void CPU::run(){
                 firstarg->r16 = u16;
                 regs.PC.r16 += 1;
                 ticks = 3;
-            }
+            } // 0x879: tilemap data
             if(l == 0x2){
                 mem->set(regs.AF.hl.r8h, firstarg->r16);
                 regs.PC.r16 += 1;
@@ -388,6 +387,9 @@ void CPU::run(){
                 regs.PC.r16+=1;
             }
             if(l == 0xA){
+                if(firstarg == &regs.AF){
+                    firstarg = &regs.HL;
+                }    
                 regs.AF.hl.r8h = mem->get(firstarg->r16);
                 regs.PC.r16 += 1;
                 if(firstarg == &regs.HL){
@@ -703,7 +705,7 @@ void CPU::run(){
                 }
                 if(l == 0xA){
                     uint16_t addr = mem->get(++regs.PC.r16);
-                    addr += mem->get(++regs.PC.r16)*0x100;    
+                    addr += mem->get(++regs.PC.r16)*0x100;
                     if(h == 0xE){
                         mem->set(regs.AF.hl.r8h, addr);
                     } else  {
@@ -831,9 +833,6 @@ void CPU::push(uint16_t dat){
     mem->set(dat/0x100,regs.SP.r16);
     regs.SP.r16-=1;
     mem->set(dat%0x100,regs.SP.r16);
-    if((mem->get(regs.SP.r16) + mem->get(regs.SP.r16+1)*0x100) != dat){
-        std::cout << "oh no" << std::endl;
-    }
 }
 
 void CPU::pop(uint16_t* dat){
@@ -842,9 +841,6 @@ void CPU::pop(uint16_t* dat){
     (*dat) += mem->get(regs.SP.r16) * 0x100;
     regs.SP.r16+=1;
     
-    if((mem->get(regs.SP.r16-2) + mem->get(regs.SP.r16-1)*0x100) != (*dat)){
-        std::cout << "oh no" << std::endl;
-    }
 }
 
 bool CPU::tick(uint8_t cpu_cycles){
