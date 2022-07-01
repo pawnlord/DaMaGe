@@ -292,7 +292,7 @@ void CPU::run(){
                     val = start-1;
                     setval(firstarg, ishigh, val);    
                 } else {
-                    start = mem->get(firstarg->r16)-1;
+                    start = mem->get(firstarg->r16);
                     val = start-1;
                     mem->set(val, firstarg->r16);
                 }    
@@ -706,7 +706,7 @@ void CPU::run(){
                 if(l == 0xA){
                     uint16_t addr = mem->get(++regs.PC.r16);
                     addr += mem->get(++regs.PC.r16)*0x100;
-                    if(h == 0xE){
+                    if(h == 0xE){               
                         mem->set(regs.AF.hl.r8h, addr);
                     } else  {
                         uint8_t val = mem->get(addr);
@@ -840,7 +840,6 @@ void CPU::pop(uint16_t* dat){
     regs.SP.r16+=1;
     (*dat) += mem->get(regs.SP.r16) * 0x100;
     regs.SP.r16+=1;
-    
 }
 
 bool CPU::tick(uint8_t cpu_cycles){
@@ -900,9 +899,9 @@ void Clock::tick(){
 }
 void CPU::print_info(){
     std::cout << std::hex << "A: " << (int)(regs.AF.hl.r8h) << " F: " << (int)(regs.AF.hl.r8l) << " (AF " << regs.AF.r16 << ")\n"; 
-    std::cout << std::hex << "B: " << (int)(regs.BC.hl.r8h) << " C: " << (int)(regs.BC.hl.r8l) << " (BC " << regs.BC.r16 << ")\n"; 
-    std::cout << std::hex << "D: " << (int)(regs.DE.hl.r8h) << " E: " << (int)(regs.DE.hl.r8l) << " (DE " << regs.DE.r16 << ")\n"; 
-    std::cout << std::hex << "H: " << (int)(regs.HL.hl.r8h) << " L: " << (int)(regs.HL.hl.r8l) << " (HL " << regs.HL.r16 << ")\n"; 
+    std::cout << std::hex << "B: " << (int)(regs.BC.hl.r8h) << " C: " << (int)(regs.BC.hl.r8l) << " (BC " << regs.BC.r16 << "=" << (int)mem->get(regs.BC.r16) << ")\n"; 
+    std::cout << std::hex << "D: " << (int)(regs.DE.hl.r8h) << " E: " << (int)(regs.DE.hl.r8l) << " (DE " << regs.DE.r16 << "=" << (int)mem->get(regs.DE.r16) << ")\n"; 
+    std::cout << std::hex << "H: " << (int)(regs.HL.hl.r8h) << " L: " << (int)(regs.HL.hl.r8l) << " (HL " << regs.HL.r16 << "=" << (int)mem->get(regs.HL.r16) << ")\n"; 
     std::cout << "PC: " << regs.PC.r16 << " SP:" << regs.SP.r16 << "\n"; 
     std::cout << "[" << (((*flags)&1<<7)?"Z":"-") << (((*flags)&1<<6)?"N":"-") << (((*flags)&1<<5)?"H":"-") << (((*flags)&1<<4)?"C":"-") << "]" << std::endl; 
 

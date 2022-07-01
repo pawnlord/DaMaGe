@@ -133,9 +133,16 @@ void PPU::pxl_fetcher(){
     } else if(state == PUSH){
         if(bgfifo.size() < 16){
             uint16_t fulltile = tilelow + (tilehigh*0x100);
-            for(int i = 0; i < 8; i++){
-                uint8_t pixel_raw = (fulltile & (0b11 << (i*2))) >> (i*2);
-                pixel_t pxl = {pixel_raw, 0, 0};
+            for(int i = 7; i >= 0; i--){
+                uint8_t pixel_raw = (fulltile & (0x101 << (i))) >> (i); // get the same bit from both bytes
+                uint8_t col = 0;
+                if((pixel_raw&0x100) > 0){
+                    col += 0b10;
+                } 
+                if((pixel_raw&0x1) > 0){
+                    col += 0b1;
+                }
+                pixel_t pxl = {col, 0, 0};
                 bgfifo.push(pxl);
             }
             for(int i = 0; i < lineobjs; i++){
@@ -188,7 +195,14 @@ void PPU::pxl_fetcher(){
             }
             for(int i = std::max(0, (curr_sprite.x - 8) - fetchX); i < std::min(fetchX - (curr_sprite.x - 8), 8); i++){
                 uint8_t pixel_raw = (fulltile & (0b11 << (i*2))) >> (i*2);                
-                pixel_t pxl = {pixel_raw, (uint8_t)(curr_sprite.flag&(1<<4)), (uint8_t)(curr_sprite.flag&(1<<7))};
+                uint8_t col = 0;
+                if((pixel_raw&0x100) > 0){
+                    col += 0b10;
+                } 
+                if((pixel_raw&0x1) > 0){
+                    col += 0b1;
+                }
+                pixel_t pxl = {col, (uint8_t)(curr_sprite.flag&(1<<4)), (uint8_t)(curr_sprite.flag&(1<<7))};
                 new_fgfifo.push(pxl);
             }
             std::queue<pixel_t> combined_fifo;

@@ -21,6 +21,9 @@ uint8_t MBC::get(uint16_t addr){
         return full[realaddr];
     } else if (addr <= 0x7FFF){
         uint32_t realaddr = (addr-0x4000) | (lowbankreg<<14) | (hibankreg<<19);
+        if(lowbankreg == 0 && hibankreg == 0){
+            realaddr += 0x4000;
+        }
         return full[realaddr];
     } else {
         uint32_t realaddr = (addr-0xA000) | (hibankreg<<14);
