@@ -59,6 +59,7 @@ class CPU{
     void pop(uint16_t* dat);
     void cmp(int a, int b);
     bool getflag(int flag);
+    void setflag(int flag, bool set);
     bool jmp(condition_e con, bool isCall, bool isNot);
     bool ret(condition_e con, bool isNot);
     void reti();

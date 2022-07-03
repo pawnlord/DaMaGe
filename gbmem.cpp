@@ -105,17 +105,17 @@ void Memory::unreq_int(uint8_t flags){
 }
 
 bool Memory::get_int(uint8_t flags){
-    return (raw_mem[0xFFFF] & flags) > 0;
-}
-bool Memory::get_int_enabled(uint8_t flags){
     return (raw_mem[0xFF0F] & flags) > 0;
 }
+bool Memory::get_int_enabled(uint8_t flags){
+    return (raw_mem[0xFFFF] & flags) > 0;
+}
 void Memory::reset_int(uint8_t flags){
-    raw_mem[0xFFFF] &= ~(flags);
+    raw_mem[0xFF0F] &= ~(flags);
 }
 uint8_t Memory::get_int_num(){
     for(int i = 0; i < 5; i++){
-        if((raw_mem[0xFF0F] & ((uint8_t)pow(2, i))) > 0){
+        if((raw_mem[0xFF0F] & ((uint8_t)(1<<i))) > 0){
             return i;
         }
     }
