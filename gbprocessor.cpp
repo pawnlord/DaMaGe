@@ -232,7 +232,7 @@ void CPU::run(){
             regtype_e ishigh;
             gbreg* firstarg = get_first_arg(opcode, &ishigh);
             if(l == 0x0){
-                char i8 = (int)(mem->get(++regs.PC.r16));
+                char i8 = (char)(mem->get(++regs.PC.r16));
                 uint16_t addr = regs.PC.r16 + i8;
                 ticks = 2;
                 if(((h == 0x2 && !(getflag(0x7)))) ||
@@ -286,7 +286,7 @@ void CPU::run(){
                 setbcdflags(start, val, false);
                 regs.PC.r16 += 1;
                 ticks = 1;
-                (*flags) = (val == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
+                setflag(7, val == 0);
             }
             if(l == 0x5 || l == 0xD){
                 uint8_t val, start;
@@ -302,7 +302,7 @@ void CPU::run(){
                 setbcdflags(start, val, true);
                 regs.PC.r16 += 1;
                 ticks = 1;
-                (*flags) = (val == 0)?((*flags) | (0x1<<0x7)):((*flags) & ~(0x1<<0x7));
+                setflag(7, val == 0);
             }
             if(l == 0x6 ||  l == 0xE){
                 regs.PC.r16 += 1;
@@ -310,7 +310,7 @@ void CPU::run(){
                 if(ishigh != FULL){
                     setval(firstarg, ishigh, val);
                 } else {
-                    mem->set(val, getval(firstarg, ishigh));
+                    mem->set(val, firstarg->r16);
                 }
                 regs.PC.r16 += 1;
                 ticks = 2;
@@ -326,10 +326,10 @@ void CPU::run(){
                     (*flags) = ((*flags) & ~0x10) | (lastbit<<4);
                 } else if(h == 0x1){
                     uint8_t lastbit = (regs.AF.hl.r8h & 0x80) >> 3; // get last bit to keep
-                    uint8_t carrybit = ((*flags) & 0x10) >> 3; 
+                    uint8_t carrybit = ((*flags) & 0x10) >> 4; 
                     (*flags) = ((*flags) & ~0x10) | lastbit;
                     regs.AF.hl.r8h <<= 1;
-                    regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x1) | carrybit;     
+                    regs.AF.hl.r8h = (regs.AF.hl.r8h & ~0x1) | carrybit;     
                 } else if (h == 0x2){
                     uint8_t *A = &regs.AF.hl.r8h;
                     int val = *A;
@@ -393,6 +393,7 @@ void CPU::run(){
             }
             if(l == 0xA){
                 if(firstarg == &regs.AF){
+                    ishigh = FULL;
                     firstarg = &regs.HL;
                 }    
                 regs.AF.hl.r8h = mem->get(firstarg->r16);
@@ -418,14 +419,18 @@ void CPU::run(){
                 if(h == 0x0){
                     uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 7; // get last bit to keep
                     regs.AF.hl.r8h >>= 1;
-                    regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | lastbit; 
-                    (*flags) = ((*flags) & ~0x10) | (lastbit>>3);
+                    regs.AF.hl.r8h = (regs.AF.hl.r8h & ~0x80) | lastbit; 
+                    setflag(4, lastbit > 0);
+                    setflag(7, false);
+                    setbcddir(false, false);
                 } else if(h == 0x1){
-                    uint8_t lastbit = (regs.AF.hl.r8h & 0x1) << 4; // get last bit to keep
-                    uint8_t carrybit = ((*flags) & 0x10) << 4; 
-                    (*flags) = ((*flags) & ~0x10) | lastbit;
+                    uint8_t lastbit = (regs.AF.hl.r8h & 0x1); // get last bit to keep
+                    uint8_t carrybit = ((*flags) & 0x10) << 3; 
+                    setflag(4, lastbit > 0);
                     regs.AF.hl.r8h >>= 1;
-                    regs.AF.hl.r8h == (regs.AF.hl.r8h & ~0x80) | carrybit;     
+                    regs.AF.hl.r8h = (regs.AF.hl.r8h & ~0x80) | carrybit;     
+                    setflag(7, false);
+                    setbcddir(false, false);
                 } else if (h == 0x2){
                     uint8_t *A = &regs.AF.hl.r8h;
                     (*A) = (*A) ^ 0xFF;
@@ -454,12 +459,12 @@ void CPU::run(){
                 } else{
                     ticks = 1;
                 }
-                uint8_t val = (stype == FULL)? mem->get(getval(sarg, FULL)) : getval(sarg, stype);
+                uint8_t val = (stype == FULL)? mem->get(sarg->r16) : getval(sarg, stype);
                 
                 if(ftype != FULL){
                     setval(farg, ftype, val);
                 } else {
-                    mem->set(val, getval(farg, ftype));
+                    mem->set(val, farg->r16);
                 }
             }
         }
@@ -475,7 +480,7 @@ void CPU::run(){
             }
 
             uint8_t* A = &regs.AF.hl.r8h;
-            int val = (ishigh==FULL)?mem->get(getval(arg, FULL)):(int)getval(arg, ishigh);
+            int val = (ishigh==FULL)?mem->get(arg->r16):getval(arg, ishigh);
             if(l <= 7){
                 if(h == 0x8){
                     uint8_t carry = ((*A) + val > 0xFF) << 0x4;
@@ -519,6 +524,7 @@ void CPU::run(){
                     uint8_t zero = (((*A) ^ val) == 0) << 0x7;
                     (*flags) = ((*flags) & (~0x80)) | zero;
                     setbcddir(false, false);
+                    setflag(4, false);
                     (*A) = (*A) ^ val;
                 } else if(h == 0xB){
                     cmp((*A), val);
@@ -721,12 +727,13 @@ void CPU::run(){
                     regs.PC.r16 += 1;
                 }
                 if(l == 0xE){
-                    uint8_t n = mem->get(++regs.PC.r16);
+                    uint8_t u8 = mem->get(++regs.PC.r16);
                     if(h == 0xF){
-                        cmp(regs.AF.hl.r8h, n);
+                        cmp(regs.AF.hl.r8h, u8);
                     } else {
-                        regs.AF.hl.r8h = regs.AF.hl.r8h ^ n;
+                        regs.AF.hl.r8h = regs.AF.hl.r8h ^ u8;
                         setflag(7,regs.AF.hl.r8h == 0);
+                        setflag(4,false);
 
                         setbcddir(false, false);
                     }
@@ -742,7 +749,16 @@ void CPU::run(){
 int CPU::prefixop(uint8_t opcode){
     regtype_e type;
     gbreg* argreg = get_last_arg((opcode%0x10)%0x8, &type);
-    uint8_t* arg = (type == FULL)?mem->getref(argreg->r16):((type==HIGH)?&argreg->hl.r8h:&argreg->hl.r8l);
+    
+    uint8_t* arg;
+    if(type == FULL){
+        arg = mem->getref(argreg->r16);
+    } else if(type == HIGH){
+        arg = &argreg->hl.r8h;
+    } else if(type == LOW){
+        arg = &argreg->hl.r8l;
+    }
+    
     int ticks = (type == FULL)?4:2;
     if(opcode < 0x40){
         bool isleft = (opcode/8)%2 == 0;
@@ -762,11 +778,11 @@ int CPU::prefixop(uint8_t opcode){
                 break;
                 case 1:
                     lastbit = ((*arg) & 0x80) >> 3; // get last bit to keep
-                    carrybit = ((*flags) & 0x10) << 4; 
+                    carrybit = ((*flags) & 0x10) >> 4; 
                     (*flags) = ((*flags) & ~0x10) | lastbit;
                     (*arg) <<= 1;
                     (*arg) = ((*arg) & ~0x1) | carrybit;     
-                    zero = (*arg) == 0 ? 1<<7 : 0;
+                    zero = (((*arg) & 0xFF) == 0) ? (1<<7) : 0;
                     (*flags) = ((*flags) & ~0x80) | zero;     
                 break;
                 case 2:
@@ -774,14 +790,14 @@ int CPU::prefixop(uint8_t opcode){
                     (*arg) <<= 1;
                     (*arg) &= ~0x1; 
                     (*flags) = ((*flags) & ~0x10) | lastbit;
-                    zero = (*arg) == 0 ? 1<<7 : 0;
+                    zero = (((*arg) & 0xFF) == 0) ? (1<<7) : 0;
                     (*flags) = ((*flags) & ~0x80) | zero;     
                 break;
                 case 3:
                     h = (*arg)/0x100;
                     l = (*arg)%0x100;
                     (*arg) = h + l*0x100;
-                    zero = ((*arg) & 0xFF) == 0 ? 1<<7 : 0;
+                    zero = (((*arg) & 0xFF) == 0) ? (1<<7) : 0;
                     (*flags) = ((*flags) & ~0x80) | zero;     
                 break;
             }
@@ -791,34 +807,34 @@ int CPU::prefixop(uint8_t opcode){
                 case 0:
                     lastbit = ((*arg) & 0x1) << 7; // get last bit to keep
                     (*arg) >>= 1;
-                    (*arg) == ((*arg) & ~0x80) | lastbit; 
-                    zero = (*arg) == 0 ? 1<<7 : 0;
+                    (*arg) = ((*arg) & ~0x80) | lastbit; 
+                    zero = (((*arg) & 0xFF) == 0) ? (1<<7) : 0;
                     (*flags) = ((*flags) & ~0x10) | (lastbit>>3);
                     (*flags) = ((*flags) & ~0x80) | zero;     
                 break;
                 case 1:
-                    lastbit = ((*arg) & 0x1) << 4; // get last bit to keep
-                    carrybit = ((*flags) & 0x10) << 4; 
+                    lastbit = ((*arg) & 0x1) << 4; 
+                    carrybit = ((*flags) & 0x10) << 3; 
                     (*flags) = ((*flags) & ~0x10) | lastbit;
                     (*arg) >>= 1;
                     (*arg) = ((*arg) & ~0x80) | carrybit;
-                    zero = (*arg) == 0 ? 1<<7 : 0;
+                    zero = (((*arg) & 0xFF) == 0) ? 0x80 : 0;
                     (*flags) = ((*flags) & ~0x80) | zero;     
                 break;
                 case 2:
                     lastbit = ((*arg) & 0x80); // get last bit to keep
-                    firstbit = ((*arg) & 0x1) << 4; // get last bit to keep
+                    firstbit = ((*arg) & 0x1) << 4;
                     (*arg) >>= 1;
-                    (*arg) == ((*arg) & ~0x80) | lastbit; 
-                    zero = (*arg) == 0 ? 1<<7 : 0;
+                    (*arg) = ((*arg) & ~0x80) | lastbit; 
+                    zero = (((*arg) & 0xFF) == 0) ? (1<<7) : 0;
                     (*flags) = ((*flags) & ~0x10 & ~(1<<7)) | firstbit | zero;
                 break;
                 case 3:
                     firstbit = ((*arg) & 0x1) << 4; 
                     (*arg) >>= 1;
-                    (*arg) == ((*arg) & ~0x80); 
-                    zero = (*arg) == 0 ? 1<<7 : 0;
-                    (*flags) = ((*flags) & ~0x10 & ~(1<<7)) | firstbit | zero;
+                    (*arg) = ((*arg) & ~0x80); 
+                    zero = (((*arg) & 0xFF) == 0) ? 0x80 : 0;
+                    (*flags) = ((*flags) & ~0x10 & ~0x80) | firstbit | zero;
                 break;
             }
         }
