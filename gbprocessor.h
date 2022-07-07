@@ -50,7 +50,7 @@ class CPU{
     private:
     gbreg* get_first_arg(int lowbyte, regtype_e* ishigh);
     gbreg* get_last_arg(int lowbyte, regtype_e* ishigh);
-    void setbcdflags(uint8_t before, uint8_t after, bool issub);
+    void setbcdflags(uint8_t before, uint8_t operand, bool issub);
     void setbcddir(bool ishc, bool issub);
     void clearbcd();
     bool tick(uint8_t cpu_cycles);
