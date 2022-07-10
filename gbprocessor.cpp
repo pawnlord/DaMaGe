@@ -380,14 +380,12 @@ void CPU::run(){
                 }
             }
             if(l == 0x9){
-                if(ishigh == FULL){
+                if(firstarg == &regs.AF){
                     firstarg = &regs.SP;
                 }
-                uint16_t val = getval(firstarg, FULL);
-                uint8_t carry = ((regs.HL.r16) + val > 0xFF) << 0x4;
-                uint8_t zero = ((((regs.HL.r16) + val) & 0xFF) == 0) << 0x7;
-                (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
-                setbcdflags(regs.HL.r16, val, false);
+                uint16_t val = firstarg->r16;
+                setflag(4, (regs.HL.r16) + val > 0xFFFF);
+                setbcddir((regs.HL.r16 & 0xFFF) + (val & 0xFFF) > 0xFFF, false);
                 regs.HL.r16 = regs.HL.r16 + val;
                 regs.PC.r16+=1;
             }
@@ -408,10 +406,10 @@ void CPU::run(){
                 //std::cout << regs.HL.r16 << std::endl;
             }
             if(l == 0xB){
-                if(ishigh == FULL){
+                if(firstarg == &regs.AF){
                     firstarg = &regs.SP;
                 }
-                setval(firstarg, FULL, getval(firstarg, FULL)-1);    
+                firstarg->r16 = firstarg->r16-1;
                 regs.PC.r16 += 1;
                 ticks = 2;
             }
@@ -508,13 +506,14 @@ void CPU::run(){
                     uint8_t cy = getflag(0x4)?1:0;
                     setflag(4, (*A) + val + cy > 0xFF);
                     setflag(7, (((*A) + val + cy) & 0xFF) == 0);
-                    setbcdflags((*A), val + cy, false);
+                    setbcddir(((*A & 0xF) + (val & 0xF) + cy) > 0xF, false);
                     (*A) = (*A) + val + cy;
+                    
                 } else if(h == 0x9){
                     uint8_t cy = getflag(0x4)?1:0;
                     setflag(4, ((*A) - val - cy < 0));
                     setflag(7, (((*A) - val - cy) & 0xFF) == 0);
-                    setbcdflags((*A), val + cy, true);
+                    setbcddir(((*A & 0xF) - (val & 0xF) - cy) < 0, true);
                     (*A) = (*A) - val - cy;
                 } else if(h == 0xA){
                     setflag(7, ((*A) ^ val) == 0);
@@ -635,19 +634,18 @@ void CPU::run(){
                 if(l == 0xE){
                     uint8_t* A = &regs.AF.hl.r8h;
                     uint8_t cy = getflag(0x4)?1:0;
-                    uint8_t u8 = mem->get(++regs.PC.r16), carry, zero;
-                    uint8_t start = (*A);
+                    uint8_t u8 = mem->get(++regs.PC.r16);
                     if(h == 0xC){
-                        carry = ((*A) + u8 + cy > 0xFF) << 0x4;
-                        zero = ((((*A) + u8 + cy) & 0xFF) == 0) << 0x7;
+                        setflag(4, (*A) + u8 + cy > 0xFF);
+                        setflag(7, (((*A) + u8 + cy) & 0xFF) == 0);
+                        setbcddir(((*A & 0xF) + (u8 & 0xF) + cy) > 0xF, false);
                         (*A) = (*A) + u8 + cy;
                     } else {
-                        carry = ((*A) - u8 - cy < 0) << 0x4;
-                        zero = ((((*A) - u8 - cy) & 0xFF) == 0) << 0x7;
+                        setflag(4, (*A) - u8 - cy < 0);
+                        setflag(7, (((*A) - u8 - cy) & 0xFF) == 0);
+                        setbcddir(((*A & 0xF) - (u8 & 0xF) - cy) < 0, true);
                         (*A) = (*A) - u8 - cy;    
                     }
-                    setbcdflags(start, u8, h==0xD);
-                    (*flags) = ((*flags) & (~0x10) & (~0x80)) | carry | zero;
                     regs.PC.r16 += 1;
                     ticks = 2;
                 }
@@ -668,24 +666,27 @@ void CPU::run(){
                     regs.PC.r16 += 1;
                 }
                 if(l == 0x6){
-                    uint8_t n = mem->get(++regs.PC.r16);
+                    uint8_t u8 = mem->get(++regs.PC.r16);
                     if(h == 0xF){
-                        regs.AF.hl.r8h = regs.AF.hl.r8h | n;
+                        regs.AF.hl.r8h = regs.AF.hl.r8h | u8;
                         setflag(7,regs.AF.hl.r8h == 0);
-                        setbcddir(true, false);
-                    } else {
-                        regs.AF.hl.r8h = regs.AF.hl.r8h & n;
-                        setflag(7,regs.AF.hl.r8h == 0);
+                        setflag(4, false);
                         setbcddir(false, false);
+                    } else {
+                        regs.AF.hl.r8h = regs.AF.hl.r8h & u8;
+                        setflag(7,regs.AF.hl.r8h == 0);
+                        setflag(4, false);
+                        setbcddir(true, false);
                     }
-                    setflag(4, false);
                     ticks = 2;
                     regs.PC.r16 += 1;
                 }
                 if(l == 0x8){
                     int8_t i8 = (int8_t)mem->get(++regs.PC.r16);
-                    uint8_t carry = (regs.SP.r16 + i8 > 0xFF)?1<<4:0;
-                    setbcdflags(regs.SP.r16, i8, false);
+                    setflag(7, false);
+                    setflag(5, (regs.SP.r16 & 0xF) + (((uint16_t)i8) & 0xF) > 0xF);
+                    setflag(4, (regs.SP.r16 & 0xFF) + (((uint16_t)i8) & 0xFF) > 0xFF);
+                    setflag(6, false);
                     if(h == 0xE){
                         regs.SP.r16 += i8; 
                         ticks = 4;
@@ -693,7 +694,6 @@ void CPU::run(){
                         regs.HL.r16 = regs.SP.r16 + i8;
                         ticks = 3;
                     }
-                    (*flags) &= ~(1<<7);
                     regs.PC.r16 += 1;
                 }
                 if(l == 0x9){
