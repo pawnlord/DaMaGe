@@ -48,6 +48,7 @@ class GraphicsManager{
 
     void set_pxl(int x, int y, int col);
     void set_pxl(int x, int y, int r, int g, int b);
+    bool *input; // scancode idx
     private:
     int w, h, s, head;
     std::string name;

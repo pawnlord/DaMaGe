@@ -9,20 +9,19 @@
 #include "gbmbc.h"
 
 struct cart_info{
-    int32_t entry_point;
-    int8_t logo[0x30];
-    int8_t title[0x10];
-    int8_t CGB_flag;
-    int16_t new_license_code;
-    int8_t SGB_flag;
-    int8_t MBC_type;
-    int8_t ROM_size;
-    int8_t RAM_size;
-    int8_t dest_code;
-    int8_t old_license_code;
-    int8_t vers_no;
-    int8_t head_cs;
-    int8_t glob_cs;
+    uint32_t entry_point;
+    uint8_t logo[0x30];
+    uint8_t title[0x10];
+    uint16_t new_license_code;
+    uint8_t SGB_flag;
+    uint8_t MBC_type;
+    uint8_t ROM_size;
+    uint8_t RAM_size;
+    uint8_t dest_code;
+    uint8_t old_license_code;
+    uint8_t vers_no;
+    uint8_t head_cs;
+    uint8_t glob_cs;
 };
 
 struct timereg_t{
@@ -36,7 +35,7 @@ void print_cart_info(cart_info* inf);
 
 class Memory{
     public:
-    Memory();
+    Memory(bool *input);
     void dump();
     uint8_t get(uint16_t addr);
     uint8_t& operator[](int);
@@ -54,7 +53,9 @@ class Memory{
     void reset_regs();
     MBC mbc;
     uint8_t *raw_mem;
+    bool *input; // input from sdl
     private:
+    uint8_t handle_input();
     cart_info inf;
 };
 

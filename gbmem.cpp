@@ -1,14 +1,17 @@
 #include "gbmem.h"
+#include <SDL2/SDL.h>
 
 void print_cart_info(cart_info* inf) {
     std::cout << "Entry: " << std::hex << inf->entry_point << std::endl;
     std::cout << "Title: " << std::string((char*) inf->title) << std::endl;
+    std::cout << "Cart Type: " << std::hex << (int)inf->MBC_type << std::endl;
 }
 
-Memory::Memory(){
+Memory::Memory(bool* input){
     raw_mem = (uint8_t*) malloc(sizeof(uint8_t) * 0x10000);
     memset(raw_mem, 0, 0x10000);
     timereg = (timereg_t*)(raw_mem+0xFF04); // registers for dividers and timers 
+    this->input = input;
 }
 
 
@@ -63,9 +66,54 @@ uint8_t Memory::get(uint16_t addr){
     if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
         return mbc.get(addr);
     }
-    return raw_mem[addr];
+    switch(addr){
+        case 0xFF00:
+            return handle_input();
+        break;
+        default:
+            return raw_mem[addr];
+        break;
+    }
 }
 
+uint8_t Memory::handle_input(){
+    uint8_t* inp_reg = raw_mem+0xFF00;
+    uint8_t original = *inp_reg & 0xf; // for interrupt
+    *inp_reg |= (0xf); // reset to default state
+    if(*inp_reg & (1<<4)){
+        if(input[SDL_SCANCODE_DOWN]){
+            *inp_reg &= ~(1<<3);
+        }
+        if (input[SDL_SCANCODE_UP]){
+            *inp_reg &= ~(1<<2);
+        }
+        if (input[SDL_SCANCODE_LEFT]){
+            *inp_reg &= ~(1<<1);
+        }
+        if (input[SDL_SCANCODE_RIGHT]){
+            *inp_reg &= ~(1<<1);
+        }
+    }
+    if(*inp_reg & (1<<5)){
+        if(input[SDL_SCANCODE_W]){
+            *inp_reg &= ~(1<<3);
+        }
+        if (input[SDL_SCANCODE_Q]){
+            *inp_reg &= ~(1<<2);
+        }
+        if (input[SDL_SCANCODE_S]){
+            *inp_reg &= ~(1<<1);
+        }
+        if (input[SDL_SCANCODE_A]){
+            *inp_reg &= ~(1<<1);
+        }
+    }
+    if((*inp_reg & 0xf) != original){
+        req_int(1<<4);
+        std::cout << "PRESS";
+    }
+    return *inp_reg;
+}
 uint8_t& Memory::operator[](int idx){
     return raw_mem[idx];
 }
@@ -73,8 +121,15 @@ uint8_t& Memory::operator[](int idx){
 void Memory::set(uint8_t v, uint16_t addr){
     if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
         mbc.set(addr, v);
-    } else if(addr <= 0xFFFF){
-        raw_mem[addr] = v;
+    } else{
+        switch(addr){
+            case 0xFF00:
+                raw_mem[addr] = (raw_mem[addr] & ~(0b11<<4)) | (v & ~0xCF);
+            break;
+            default:
+                raw_mem[addr] = v;
+            break;
+        }
     }
 }
 void Memory::dump(){

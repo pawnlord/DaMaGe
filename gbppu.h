@@ -34,6 +34,9 @@ class PPU{
     PPU(Memory *mem);
     void tick();
     //layer bg, window, objects;
+    uint8_t getstatfull();
+    uint8_t getlcdcfull();
+    bool ppu_enabled();
     layer lcd;
     private:
     void init_drawpxl();

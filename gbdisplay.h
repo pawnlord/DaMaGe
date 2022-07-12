@@ -8,7 +8,9 @@
 // Layer between gameboy and SDL
 class GameboyDisplay : MainLoop{
     public:
-    GameboyDisplay(PPU* ppu);
+    GameboyDisplay();
+    void add_ppu(PPU* ppu);
+
     void update_gm_pixels();
     GraphicsManager gm;
     private:

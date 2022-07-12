@@ -89,6 +89,12 @@ void GraphicsManager::render_cb(){
                     std::cout << "QUIT\n";
                     running = false;   
                 break;
+                case SDL_KEYDOWN:
+                    input[evt.key.keysym.scancode] = true;  
+                break;
+                case SDL_KEYUP:
+                    input[evt.key.keysym.scancode] = false;  
+                break;
             }
         }
 
@@ -105,7 +111,6 @@ void GraphicsManager::render_cb(){
         }
         SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
         SDL_RenderPresent(ren);
-        SDL_Delay(100);
         this->runmx.unlock(); 
     }
 }
@@ -123,6 +128,10 @@ GraphicsManager::GraphicsManager(std::string name, int w, int h, int s, int head
         for(int j = 0; j < h; j++){
             pixs[i].push_back(Pixel(s*i,s*j+head,s,255 * (i%2),255* (i%2),255* (i%2)));
         }
+    }
+    input = (bool*)malloc(sizeof(bool)*255);
+    for(int i = 0; i < 255; i++){
+        input[i] = false;
     }
 }
 

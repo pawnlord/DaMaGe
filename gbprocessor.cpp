@@ -32,10 +32,10 @@ CPU::CPU(Memory *mem, Clock*clock){
     this->clock = clock;
     ppu = new PPU(mem);
     regs.PC = 0x100;
-    regs.AF.hl.r8h = 0x11;
-    regs.BC = 0x00;
-    regs.DE = 0xFF56;
-    regs.HL = 0x000D;
+    regs.AF.hl.r8h = 0x01;
+    regs.BC = 0x0013;
+    regs.DE = 0x00D8;
+    regs.HL = 0x014D;
     regs.SP = 0xFFFE;
     flags = &regs.AF.hl.r8l;
     (*flags) = 0x80;
@@ -194,20 +194,29 @@ bool CPU::ret(condition_e con, bool isNot){
 }
 void CPU::reti(){
     ret(CON_NONE, false);
-    IME = 1;
+    IME = true;
 }
 void CPU::run(){
     static uint32_t temp = 0;
+    uint16_t address = 0;
     while(true){
         uint8_t opcode = mem->get(regs.PC.r16);
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
         temp += 1;
         if(debug){
             cycles_to_run -= 1;
-            if(cycles_to_run == 0){
+            if(cycles_to_run == 0 || regs.PC.r16 == address){
+                std::string inp;
                 print_info();
                 std::cout << regs.PC.r16 << " " << (int)opcode << "(" << (int)mem->get(regs.PC.r16+1) << "," << (int)mem->get(regs.PC.r16+2) <<  ")" << "\n";
-                std::cin >> cycles_to_run;
+                std::cin >> inp;
+                if(inp.substr(0,5) == "break"){
+                    address = std::strtol(inp.substr(5, inp.length()).c_str(), NULL, 16);
+                    std::cout << address << std::endl;
+                    cycles_to_run = 1;
+                } else {
+                    cycles_to_run = std::atoi(inp.c_str());
+                }
                 if(cycles_to_run == -1){
                     cycles_to_run = 1;
                     std::cout << "temp" << temp << "\n";
@@ -572,7 +581,7 @@ void CPU::run(){
             }
             else if(l == 0x7){
                 push(regs.PC.r16+1);
-                uint16_t addr = 0x10 + (h-0xC)*0x10;    
+                uint16_t addr = (h-0xC)*0x10;    
                 regs.PC.r16 = addr;
                 ticks = 4;
             }
@@ -652,6 +661,7 @@ void CPU::run(){
             } else {
                 if(l == 0x2 || l == 0x0){
                     // This is disgusting
+                    
                     uint16_t addr = (l == 0)?0xFF00+mem->get(++regs.PC.r16) : (0xFF00+regs.BC.hl.r8l);
                     ticks = (l == 0)?3:2;
                     if(h == 0xE) {
@@ -875,11 +885,10 @@ bool CPU::tick(uint8_t cpu_cycles){
     int interrupt = mem->get_int_num();
     if(IME && ((*IE) & (1 << interrupt)) > 0){
         push(regs.PC.r16);
-        std::cout << "Interrupt Found: " << interrupt << "\n";
         regs.PC.r16 = 0x40 + (interrupt * 8);
         mem->reset_int(1<<interrupt);
+        IME = false;
     }
-    IME = false;
     
     return true;
 }
@@ -923,5 +932,6 @@ void CPU::print_info(){
     std::cout << std::hex << "H: " << (int)(regs.HL.hl.r8h) << " L: " << (int)(regs.HL.hl.r8l) << " (HL " << regs.HL.r16 << "=" << (int)mem->get(regs.HL.r16) << ")\n"; 
     std::cout << "PC: " << regs.PC.r16 << " SP:" << regs.SP.r16 << "\n"; 
     std::cout << "[" << (((*flags)&1<<7)?"Z":"-") << (((*flags)&1<<6)?"N":"-") << (((*flags)&1<<5)?"H":"-") << (((*flags)&1<<4)?"C":"-") << "]" << std::endl; 
-
+    std::cout << "Interrupt Info: IME=" << IME << ", IF=" << (int)mem->get(0xFF0F) << ", IE=" << (int)mem->get(0xFFFF) << "\n"; 
+    std::cout << "Video Info: S=" << (int)ppu->getstatfull() << ", C=" << (int)ppu->getlcdcfull() << std::endl;
 }

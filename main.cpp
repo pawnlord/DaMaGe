@@ -2,7 +2,8 @@
 #include "gbprocessor.h"
 #include <time.h>
 int main(int argc, char** argv){
-    Memory mem;
+    GameboyDisplay gd;
+    Memory mem(gd.gm.input);
     if(argc == 1){
         mem.load_cartridge("sml.gb");
     } else {
@@ -11,8 +12,7 @@ int main(int argc, char** argv){
     Clock clock(&mem);
     CPU cpu(&mem, &clock);
     
-    GameboyDisplay gd(cpu.getppu());
-
+    gd.add_ppu(cpu.getppu());
     gd.gm.start();
     cpu.run();
     

@@ -40,6 +40,9 @@ void PPU::tick(){
             if(mem->get_int_enabled(0x2))
                 mem->req_int(0x2);
         }
+        if((*LY) == 143){
+            mem->req_int(0x1);
+        }
         
         // Interrupts
         if((*LY) == (*LYC)){
@@ -57,11 +60,14 @@ void PPU::tick(){
             mode = M2;
         }
     }
-    (*STAT) = ((*STAT) & ~(0b11)) | mode;
-    if(mode == M2){
-        updt_oamscan();
-    } else if (mode == M3){
-        updt_drawpxl();
+
+    if(ppu_enabled()){
+        (*STAT) = ((*STAT) & ~(0b11)) | mode;
+        if(mode == M2){
+            updt_oamscan();
+        } else if (mode == M3){
+            updt_drawpxl();
+        }
     }
 }
 
@@ -73,7 +79,7 @@ void PPU::init_drawpxl(){
 
     // reset fetchX to a roundable number;
     uint8_t offset = (*SCX)&7;
-    fetchX = (offset==0)?0:8-offset;
+    fetchX = (offset==0)?0:(8-offset);
     displayX = fetchX;
 }
 
@@ -116,16 +122,21 @@ void PPU::pxl_fetcher(){
             fetcherX = (fetchX - ((*WX) - 7)) / 8;
             fetcherY = ((*LY) - (*WY)) / 8;    
         }
-        tile = mem->get(tilemap + (fetcherX + fetcherY*32)%0x400); // maybe>>>
+        tile = mem->get(tilemap + (fetcherX + fetcherY*32)%0x400); // maybe???
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_LOW){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
-        uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2: 0x9000 + ((int)tile)*16 + row*2;
+        uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2: 0x9000 + ((int8_t)tile)*16 + row*2;
+        tiledata = 0x8000 + tile*16 + row*2;
+        if(!getlcdc(4)){
+            //std::cout << (int)tile << "\n";
+        }
         tilelow = mem->get(tiledata);
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_HIGH){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
-        uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + (((*LY)/8) ) + 1 : 0x9000 + ((int)tile)*16 + row*2 + 1;
+        uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + 1 : 0x9000 + ((int8_t)tile)*16 + row*2 + 1;
+        tiledata = 0x8000 + tile*16 + row*2 + 1;
         tilehigh = mem->get(tiledata);
         state = (state_e)(((int)state) + 1);
     } else if(state == SLEEP){
@@ -134,12 +145,12 @@ void PPU::pxl_fetcher(){
         if(bgfifo.size() < 16){
             uint16_t fulltile = tilelow + (tilehigh*0x100);
             for(int i = 7; i >= 0; i--){
-                uint8_t pixel_raw = (fulltile & (0x101 << (i))) >> (i); // get the same bit from both bytes
+                uint16_t pixel_raw = (fulltile & (0x101 << (i))) >> (i); // get the same bit from both bytes
                 uint8_t col = 0;
                 if((pixel_raw&0x100) > 0){
                     col += 0b10;
                 } 
-                if((pixel_raw&0x1) > 0){
+                if((pixel_raw&0x1) > 0){ 
                     col += 0b1;
                 }
                 pixel_t pxl = {col, 0, 0};
@@ -194,7 +205,7 @@ void PPU::pxl_fetcher(){
                 new_fgfifo.push(temp);
             }
             for(int i = std::max(0, (curr_sprite.x - 8) - fetchX); i < std::min(fetchX - (curr_sprite.x - 8), 8); i++){
-                uint8_t pixel_raw = (fulltile & (0b11 << (i*2))) >> (i*2);                
+                uint8_t pixel_raw = (fulltile & (0x101 << (i))) >> (i);                
                 uint8_t col = 0;
                 if((pixel_raw&0x100) > 0){
                     col += 0b10;
@@ -267,9 +278,16 @@ void PPU::updt_drawpxl(){
 }
 
 bool PPU::getlcdc(int val){
-    int temp = (int)(pow(2, val));
-    if ((temp & (*LCDC)) > 0){
-        return true;
-    }
-    return false;
+    return (*LCDC) & (1<<val);
+}
+
+bool PPU::ppu_enabled(){
+    return getlcdc(7);
+}
+
+uint8_t PPU::getstatfull(){
+    return (*STAT);
+}
+uint8_t PPU::getlcdcfull(){
+    return (*LCDC);
 }
