@@ -79,10 +79,11 @@ uint8_t Memory::get(uint16_t addr){
 uint8_t Memory::handle_input(){
     uint8_t* inp_reg = raw_mem+0xFF00;
     uint8_t original = *inp_reg & 0xf; // for interrupt
-    *inp_reg |= (0xf); // reset to default state
-    if(*inp_reg & (1<<4)){
+    *inp_reg |= (0xCf); // reset to default state
+    if((*inp_reg & (1<<4)) == 0){
         if(input[SDL_SCANCODE_DOWN]){
             *inp_reg &= ~(1<<3);
+            std::cout << "down pressed" << std::endl;
         }
         if (input[SDL_SCANCODE_UP]){
             *inp_reg &= ~(1<<2);
@@ -91,10 +92,10 @@ uint8_t Memory::handle_input(){
             *inp_reg &= ~(1<<1);
         }
         if (input[SDL_SCANCODE_RIGHT]){
-            *inp_reg &= ~(1<<1);
+            *inp_reg &= ~(1<<0);
         }
     }
-    if(*inp_reg & (1<<5)){
+    if((*inp_reg & (1<<5)) == 0){
         if(input[SDL_SCANCODE_W]){
             *inp_reg &= ~(1<<3);
         }
@@ -105,12 +106,12 @@ uint8_t Memory::handle_input(){
             *inp_reg &= ~(1<<1);
         }
         if (input[SDL_SCANCODE_A]){
-            *inp_reg &= ~(1<<1);
+            *inp_reg &= ~(1<<0);
         }
     }
     if((*inp_reg & 0xf) != original){
         req_int(1<<4);
-        std::cout << "PRESS";
+        std::cout << "PRESS" << std::hex<<  (int)original << std::endl;
     }
     return *inp_reg;
 }
