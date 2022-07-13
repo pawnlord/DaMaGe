@@ -52,7 +52,7 @@ void Memory::reset_regs(){
     set(0, kSCX);
     set(0, kLY);
     set(0, kLYC);
-    set(0xFF, kDMA);
+    raw_mem[kDMA] = 0xFF;
     set(0xFC, kBGP);
     set(0, kOBP0);
     set(0, kOBP1);
@@ -63,6 +63,9 @@ void Memory::reset_regs(){
 }
 
 uint8_t Memory::get(uint16_t addr){
+    if(inDMA && addr < 0xFF80){
+        return 0xFF; // Probably not the right value, but shouldn't be touched anyway
+    }
     if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
         return mbc.get(addr);
     }
@@ -111,7 +114,6 @@ uint8_t Memory::handle_input(){
     }
     if((*inp_reg & 0xf) != original){
         req_int(1<<4);
-        std::cout << "PRESS" << std::hex<<  (int)original << std::endl;
     }
     return *inp_reg;
 }
@@ -120,19 +122,37 @@ uint8_t& Memory::operator[](int idx){
 }
 
 void Memory::set(uint8_t v, uint16_t addr){
-    if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
-        mbc.set(addr, v);
-    } else{
-        switch(addr){
-            case 0xFF00:
-                raw_mem[addr] = (raw_mem[addr] & ~(0b11<<4)) | (v & ~0xCF);
-            break;
-            default:
-                raw_mem[addr] = v;
-            break;
+    if(!inDMA || addr >= 0xFF80){
+        if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
+            mbc.set(addr, v);
+        } else{
+            switch(addr){
+                case 0xFF00:
+                    raw_mem[addr] = (raw_mem[addr] & ~(0b11<<4)) | (v & ~0xCF);
+                break;
+                case 0xFF46:
+                    DMA_highnib = v*0x100;
+                    DMA_counter = 0;
+                    inDMA = true;
+                break;
+                default:
+                    raw_mem[addr] = v;
+                break;
+            }
         }
     }
 }
+
+void Memory::tick(){
+    if(inDMA){
+        raw_mem[0xFE00 + DMA_counter] = raw_mem[DMA_highnib + DMA_counter];
+        DMA_counter+=1;
+        if(DMA_counter == 0xA0){
+            inDMA = false;
+        }
+    }
+}
+
 void Memory::dump(){
     std::ofstream oftest ("test.dmp", std::ofstream::binary);
     oftest.write((char*)raw_mem, 0x10000);

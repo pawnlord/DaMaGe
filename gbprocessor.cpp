@@ -857,17 +857,17 @@ int CPU::prefixop(uint8_t opcode){
 }
 
 void CPU::push(uint16_t dat){
-    regs.SP.r16-=1;
     mem->set(dat/0x100,regs.SP.r16);
     regs.SP.r16-=1;
     mem->set(dat%0x100,regs.SP.r16);
+    regs.SP.r16-=1;
 }
 
 void CPU::pop(uint16_t* dat){
+    regs.SP.r16+=1;
     (*dat) = mem->get(regs.SP.r16);
     regs.SP.r16+=1;
     (*dat) += mem->get(regs.SP.r16) * 0x100;
-    regs.SP.r16+=1;
     (*flags) &= 0xF0; // Make sure flags doesn't change   
 }
 
@@ -875,6 +875,7 @@ bool CPU::tick(uint8_t cpu_cycles){
     for(int i = 0; i < cpu_cycles; i++){
         clock->tick();
         ppu->tick();
+        mem->tick();
     }
     // any interrupt
     if(!mem->get_int(0xFF)){

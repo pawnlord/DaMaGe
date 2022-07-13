@@ -51,10 +51,14 @@ class Memory{
     bool get_int_enabled(uint8_t flags);
     void reset_int(uint8_t flags);
     void reset_regs();
+    void tick();
     MBC mbc;
     uint8_t *raw_mem;
     bool *input; // input from sdl
     private:
+    uint8_t DMA_counter = 0;
+    uint16_t DMA_highnib = 0;
+    bool inDMA = false;
     uint8_t handle_input();
     cart_info inf;
 };
