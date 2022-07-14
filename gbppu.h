@@ -45,6 +45,8 @@ class PPU{
     void pxl_fetcher();
     bool setlcdc(int value);
     bool getlcdc(int value);
+    // helper functions
+    uint8_t get_color(uint16_t fulltile, uint8_t i);
 
     Memory *mem;
     uint16_t *tile_ref;

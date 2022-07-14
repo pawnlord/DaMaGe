@@ -77,6 +77,8 @@ void PPU::init_drawpxl(){
     std::swap(fgfifo, empty);
     std::swap(bgfifo, empty);
 
+    mode = M3;
+
     // reset fetchX to a roundable number;
     uint8_t offset = (*SCX)&7;
     fetchX = (offset==0)?0:(8-offset);
@@ -86,14 +88,16 @@ void PPU::init_drawpxl(){
 void PPU::updt_oamscan(){
     static int objcount = 0;
     object_t obj = OAM[objcount];
+
     if((obj.y > (*LY) && (obj.y < (*LY) + ((getlcdc(2))?8:16))) && lineobjs < 10 && totalobjs < 10){
         lineobjs++;
         totalobjs++;
         fetchedobjs.push_back(obj);
     }
+
     objcount++;
+
     if(objcount == 40){
-        mode = M3;
         objcount = 0;
         init_drawpxl();
     }
@@ -112,9 +116,11 @@ void PPU::pxl_fetcher(){
         isWin = (*LY) >= (*WY) && fetchX >= (*WX)-7 && getlcdc(5);
         uint16_t tilemap, fetcherX, fetcherY;
         tilemap = 0x9800;
+
         if((isWin && getlcdc(6)) || (!isWin && getlcdc(3))){
             tilemap = 0x9C00;
         }
+
         if(!isWin){
             fetcherX = ((*SCX)+fetchX) / 8;
             fetcherY = ((*LY)+(*SCY)) / 8;
@@ -122,40 +128,37 @@ void PPU::pxl_fetcher(){
             fetcherX = (fetchX - ((*WX) - 7)) / 8;
             fetcherY = ((*LY) - (*WY)) / 8;    
         }
+
         tile = mem->get(tilemap + (fetcherX + fetcherY*32)%0x400); // maybe???
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_LOW){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
         uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2: 0x9000 + ((int8_t)tile)*16 + row*2;
+
         tiledata = 0x8000 + tile*16 + row*2;
-        if(!getlcdc(4)){
-            //std::cout << (int)tile << "\n";
-        }
+
         tilelow = mem->get(tiledata);
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_HIGH){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
         uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + 1 : 0x9000 + ((int8_t)tile)*16 + row*2 + 1;
+
         tiledata = 0x8000 + tile*16 + row*2 + 1;
         tilehigh = mem->get(tiledata);
+
         state = (state_e)(((int)state) + 1);
     } else if(state == SLEEP){
         state = (state_e)(((int)state) + 1);
     } else if(state == PUSH){
         if(bgfifo.size() < 16){
             uint16_t fulltile = tilelow + (tilehigh*0x100);
+
             for(int i = 7; i >= 0; i--){
-                uint16_t pixel_raw = (fulltile & (0x101 << (i))) >> (i); // get the same bit from both bytes
-                uint8_t col = 0;
-                if((pixel_raw&0x100) > 0){
-                    col += 0b10;
-                } 
-                if((pixel_raw&0x1) > 0){ 
-                    col += 0b1;
-                }
+                uint8_t col = get_color(fulltile, i);
                 pixel_t pxl = {col, 0, 0};
                 bgfifo.push(pxl);
             }
+
             for(int i = 0; i < lineobjs; i++){
                 std::cout << (int)fetchedobjs[i].x << std::endl;
                 if(((fetchedobjs[i].x-8) >= fetchX && (fetchedobjs[i].x-8) <= fetchX+8) || 
@@ -166,14 +169,18 @@ void PPU::pxl_fetcher(){
                         break;
                     }
             }
+
             if(state != SPRITE){
                 pixel_t temp = {0x0, 0x0, 0};
+
                 for(int i = fgfifo.size(); i < 8; i++){
                     fgfifo.push(temp);
                 }
+
                 state = GET_TILE;
                 fetchX += 8;
                 is_render_ready = true;
+
                 if(fetchX > WIDTH){
                     mode = M0;
                 }
@@ -190,50 +197,55 @@ void PPU::pxl_fetcher(){
         } else if(spstate == RETRIEVE){
             uint8_t row = ((*LY) - (curr_sprite.y - 16)) & 7;
             uint16_t tiledata = 0x8000 + curr_sprite.idx*16 + row*2;
+
             tilelow = mem->get(tiledata);
             tilehigh = mem->get(tiledata+1);
+
             spstate = PUSH_SPRITE;        
         } else {
             pixel_t temp = {0x0, 0x0, 0};
+
             if(fgfifo.size() < 8){
                 for(int i = fgfifo.size(); i < 8; i++){
                     fgfifo.push(temp);
                 }
             }
+
             uint16_t fulltile = tilelow + (tilehigh*0x100);
             std::queue<pixel_t> new_fgfifo;            
             uint8_t start = std::max(0, (curr_sprite.x - 8) - fetchX);
             uint8_t end = std::min(fetchX - (curr_sprite.x - 8), 8);
-            for(int i = 0; i < start; i++){
+
+            for(int i = 0; i < 8 - end; i++){
                 new_fgfifo.push(temp);
             }
-            for(int i = start; i < end; i++){
-                uint8_t pixel_raw = (fulltile & (0x101 << (i))) >> (i);                
-                uint8_t col = 0;
-                if((pixel_raw&0x100) > 0){
-                    col += 0b10;
-                } 
-                if((pixel_raw&0x1) > 0){
-                    col += 0b1;
-                }
+
+            for(int i = end; i >= start; i--){
+                uint8_t col = get_color(fulltile, i);
                 pixel_t pxl = {col, (uint8_t)(curr_sprite.flag&(1<<4)), (uint8_t)(curr_sprite.flag&(1<<7))};
                 new_fgfifo.push(pxl);
             }
+
             if(new_fgfifo.size() < 8){
                 for(int i = 8; i >= new_fgfifo.size(); i--){
                     new_fgfifo.push(temp);
                 }
             }
+
             std::queue<pixel_t> combined_fifo;
+
             for(int i = 0; i < 8; i++){
                 pixel_t old_pxl = fgfifo.front();
                 fgfifo.pop(); 
                 pixel_t new_pxl = new_fgfifo.front();
                 new_fgfifo.pop();
+
                 pixel_t pxl = (old_pxl.color == 0)?new_pxl:old_pxl;
-                combined_fifo.push(pxl);
+                combined_fifo.emplace(pxl);
             }
+
             std::swap(fgfifo, combined_fifo);
+
             for(int i = fgfifo.size(); i < 8; i++){
                 fgfifo.push(temp);
             }
@@ -248,6 +260,7 @@ void PPU::pxl_fetcher(){
                         break;
                 }
             }
+
             if(spstate != ADVANCE){
                 state = GET_TILE;
                 fetchX += 8;
@@ -259,6 +272,21 @@ void PPU::pxl_fetcher(){
         }
     }
 }
+
+uint8_t PPU::get_color(uint16_t fulltile, uint8_t i){
+    uint16_t pixel_raw = (fulltile & (0x101 << (i))) >> (i);                
+    uint8_t col = 0;
+
+    if((pixel_raw&0x100) > 0){
+        col += 0b10;
+    } 
+
+    if((pixel_raw&0x1) > 0){
+        col += 0b1;
+    }
+    return col;
+}
+
 
 void PPU::updt_drawpxl(){
     pxl_fetcher();
