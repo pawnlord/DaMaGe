@@ -79,10 +79,10 @@ void PPU::init_drawpxl(){
 
     mode = M3;
 
-    // reset fetchX to a roundable number;
-    uint8_t offset = (*SCX)&7;
-    fetchX = (offset==0)?0:(8-offset);
-    displayX = fetchX;
+    uint8_t offset = ((*SCX)%8);
+    fetchX = 0;//-offset;
+    displayX = 0;//-offset;
+    fetchWidth = WIDTH;// + ((8-offset)%8);
 }
 
 void PPU::updt_oamscan(){
@@ -90,9 +90,11 @@ void PPU::updt_oamscan(){
     object_t obj = OAM[objcount];
 
     bool is_in_line = ((*LY) >= obj.y-16) && ((*LY) <= (obj.y-16+(getlcdc(2)?16:8)));
-    if(is_in_line && lineobjs < 10 && totalobjs < 10){
+    if(is_in_line && lineobjs < 10 && totalobjs < 40){
         lineobjs++;
-        totalobjs++;
+        if((*LY) == obj.y-16){
+            totalobjs++;
+        }
         fetchedobjs.push_back(obj);
     }
 
@@ -123,18 +125,18 @@ void PPU::pxl_fetcher(){
         }
 
         if(!isWin){
-            fetcherX = ((*SCX)+fetchX ) / 8;
-            fetcherY = ((*LY)+(*SCY)) / 8;
+            fetcherX = (((*SCX)+fetchX )/8)%32;
+            fetcherY = (((*LY)+(*SCY))/8)%32;
         } else {
             fetcherX = (fetchX - ((*WX) - 7)) / 8;
             fetcherY = ((*LY) - (*WY)) / 8;    
         }
-        tile = mem->get(tilemap + (fetcherX + fetcherY*32)%0x400); // maybe???
+
+        tile = mem->get(tilemap + (fetcherX + fetcherY*32));
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_LOW){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
         uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2: 0x9000 + ((int8_t)tile)*16 + row*2;
-
 
         tilelow = mem->get(tiledata);
         state = (state_e)(((int)state) + 1);
@@ -143,7 +145,6 @@ void PPU::pxl_fetcher(){
         uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + 1 : 0x9000 + ((int8_t)tile)*16 + row*2 + 1;
 
         tilehigh = mem->get(tiledata);
-
         state = (state_e)(((int)state) + 1);
     } else if(state == SLEEP){
         state = (state_e)(((int)state) + 1);
@@ -177,7 +178,7 @@ void PPU::pxl_fetcher(){
                 fetchX += 8;
                 is_render_ready = true;
 
-                if(fetchX >= WIDTH){
+                if(fetchX >= fetchWidth){
                     mode = M0;
                 }
             }
@@ -210,7 +211,7 @@ void PPU::pxl_fetcher(){
             uint16_t fulltile = tilelow + (tilehigh*0x100);
             std::queue<pixel_t> new_fgfifo;            
             uint8_t start = std::max(0, (curr_sprite.x - 8) - fetchX);
-            uint8_t end = std::min(fetchX - (curr_sprite.x - 8), 8);
+            uint8_t end = std::min(curr_sprite.x-fetchX, 8);
 
             for(int i = 0; i < 8 - end; i++){
                 new_fgfifo.push(temp);
@@ -259,7 +260,7 @@ void PPU::pxl_fetcher(){
                 state = GET_TILE;
                 fetchX += 8;
                 is_render_ready = true;
-                if(fetchX >= WIDTH){
+                if(fetchX >= fetchWidth){
                     mode = M0;
                 }
             }
@@ -300,7 +301,9 @@ void PPU::updt_drawpxl(){
             if(pxl.color == 0){
                 pxl.color = fg_pxl.color + bg_pxl.color; // This is stupid
             }
-            lcd[displayX+i][(*LY)] = pxl.color;
+            if(displayX+i >= 0 && displayX+i < WIDTH){
+                lcd[displayX+i][(*LY)] = pxl.color;
+            }
         }
         displayX += 8;
         is_render_ready = false;

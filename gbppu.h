@@ -61,7 +61,8 @@ class PPU{
     std::queue<pixel_t> fgfifo, bgfifo;
     enum mode_e {M0 = 0, M1, M2, M3} mode;
     int dots = 0;
-    uint8_t *LY, *LYC, *SCX, *SCY, *WX, *WY, fetchX = 0, displayX = 0;
+    uint8_t *LY, *LYC, *SCX, *SCY, *WX, *WY;
+    int fetchX = 0, displayX = 0, fetchWidth = WIDTH;
 };
 
 
