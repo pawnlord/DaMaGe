@@ -89,7 +89,8 @@ void PPU::updt_oamscan(){
     static int objcount = 0;
     object_t obj = OAM[objcount];
 
-    if((obj.y > (*LY) && (obj.y < (*LY) + ((getlcdc(2))?8:16))) && lineobjs < 10 && totalobjs < 10){
+    bool is_in_line = ((*LY) >= obj.y-16) && ((*LY) <= (obj.y-16+(getlcdc(2)?16:8)));
+    if(is_in_line && lineobjs < 10 && totalobjs < 10){
         lineobjs++;
         totalobjs++;
         fetchedobjs.push_back(obj);
@@ -122,20 +123,18 @@ void PPU::pxl_fetcher(){
         }
 
         if(!isWin){
-            fetcherX = ((*SCX)+fetchX) / 8;
+            fetcherX = ((*SCX)+fetchX ) / 8;
             fetcherY = ((*LY)+(*SCY)) / 8;
         } else {
             fetcherX = (fetchX - ((*WX) - 7)) / 8;
             fetcherY = ((*LY) - (*WY)) / 8;    
         }
-
         tile = mem->get(tilemap + (fetcherX + fetcherY*32)%0x400); // maybe???
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_LOW){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
         uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2: 0x9000 + ((int8_t)tile)*16 + row*2;
 
-        tiledata = 0x8000 + tile*16 + row*2;
 
         tilelow = mem->get(tiledata);
         state = (state_e)(((int)state) + 1);
@@ -143,7 +142,6 @@ void PPU::pxl_fetcher(){
         uint8_t row = (isWin)? ((*LY)-(*WY))&7: ((*LY)+(*SCY))&7;
         uint16_t tiledata = getlcdc(4)? 0x8000 + tile*16 + row*2 + 1 : 0x9000 + ((int8_t)tile)*16 + row*2 + 1;
 
-        tiledata = 0x8000 + tile*16 + row*2 + 1;
         tilehigh = mem->get(tiledata);
 
         state = (state_e)(((int)state) + 1);
@@ -160,14 +158,12 @@ void PPU::pxl_fetcher(){
             }
 
             for(int i = 0; i < lineobjs; i++){
-                std::cout << (int)fetchedobjs[i].x << std::endl;
-                if(((fetchedobjs[i].x-8) >= fetchX && (fetchedobjs[i].x-8) <= fetchX+8) || 
-                    ((fetchedobjs[i].x) >= fetchX && (fetchedobjs[i].x) <= fetchX+8)) {
-                        state = SPRITE; // We need to parse a sprite
-                        spstate = ADVANCE;
-                        curr_sprite = fetchedobjs[i];
-                        break;
-                    }
+                if(fetchX >= fetchedobjs[i].x-8 && fetchX <= fetchedobjs[i].x) {
+                    state = SPRITE; // We need to parse a sprite
+                    spstate = ADVANCE;
+                    curr_sprite = fetchedobjs[i];
+                    break;
+                }
             }
 
             if(state != SPRITE){
@@ -181,7 +177,7 @@ void PPU::pxl_fetcher(){
                 fetchX += 8;
                 is_render_ready = true;
 
-                if(fetchX > WIDTH){
+                if(fetchX >= WIDTH){
                     mode = M0;
                 }
             }
@@ -246,9 +242,7 @@ void PPU::pxl_fetcher(){
 
             std::swap(fgfifo, combined_fifo);
 
-            for(int i = fgfifo.size(); i < 8; i++){
-                fgfifo.push(temp);
-            }
+
             // remove object
             fetchedobjs.erase(std::remove(fetchedobjs.begin(), fetchedobjs.end(), curr_sprite), fetchedobjs.end());
             // see if there is another sprite
@@ -265,7 +259,7 @@ void PPU::pxl_fetcher(){
                 state = GET_TILE;
                 fetchX += 8;
                 is_render_ready = true;
-                if(fetchX > WIDTH){
+                if(fetchX >= WIDTH){
                     mode = M0;
                 }
             }
@@ -302,7 +296,7 @@ void PPU::updt_drawpxl(){
             bgfifo.pop();
             pixel_t fg_pxl = fgfifo.front();
             fgfifo.pop();
-            pixel_t pxl = (fg_pxl.bgpriority > 0) ? fg_pxl : bg_pxl;
+            pixel_t pxl = (fg_pxl.bgpriority > 0) ? bg_pxl : fg_pxl;
             if(pxl.color == 0){
                 pxl.color = fg_pxl.color + bg_pxl.color; // This is stupid
             }

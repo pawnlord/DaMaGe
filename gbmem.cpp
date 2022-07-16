@@ -86,7 +86,6 @@ uint8_t Memory::handle_input(){
     if((*inp_reg & (1<<4)) == 0){
         if(input[SDL_SCANCODE_DOWN]){
             *inp_reg &= ~(1<<3);
-            std::cout << "down pressed" << std::endl;
         }
         if (input[SDL_SCANCODE_UP]){
             *inp_reg &= ~(1<<2);

@@ -11,7 +11,6 @@ void GameboyDisplay::add_ppu(PPU *ppu){
 }
 
 void GameboyDisplay::update_gm_pixels(){
-    static int test = 1;
     int col;
     for(int i = 0; i < WIDTH; i++){
         for(int j = 0; j < HEIGHT; j++){
@@ -19,6 +18,4 @@ void GameboyDisplay::update_gm_pixels(){
             gm.set_pxl(i, j, col);
         }
     }
-    test += 1;
-    test %= HEIGHT;
 }
