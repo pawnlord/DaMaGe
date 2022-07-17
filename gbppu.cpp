@@ -158,13 +158,14 @@ void PPU::pxl_fetcher(){
                 bgfifo.push(pxl);
             }
 
+            currobjs.clear();
             for(int i = 0; i < lineobjs; i++){
                 if((fetchX >= fetchedobjs[i].x-8 && fetchX <= fetchedobjs[i].x) || 
                    (fetchedobjs[i].x-8 >= fetchX && fetchedobjs[i].x-8 <= fetchX+8)) {
                     state = SPRITE; // We need to parse a sprite
                     spstate = ADVANCE;
-                    //currobjs.push_back(fetchedobjs[i]);
-                    curr_sprite = fetchedobjs[i];
+                    currobjs.push_back(fetchedobjs[i]);
+                    curr_sprite = currobjs[0];
                     currobjidx = 0;
                 }
             }
@@ -210,14 +211,17 @@ void PPU::pxl_fetcher(){
 
             uint16_t fulltile = tilelow + (tilehigh*0x100);
             std::vector<pixel_t> new_fgfifo;            
-            uint8_t start = std::max(curr_sprite.x - 8 - fetchX, 0); // start in tile
-            uint8_t end   = std::min(curr_sprite.x-fetchX, 8); // end in tile
-            uint8_t firstpxloff = (start==0)?8-end:-start; // offset from coordinates to first pixel
-
-            for(int i = 0; i < start; i++){
-                new_fgfifo.push_back(temp);
-            }
             bool reverse = curr_sprite.flag&(1<<5);
+            int16_t firstpxloff;
+            
+            uint8_t start = std::max(curr_sprite.x - 8 - fetchX, 0);
+            uint8_t end   = std::min(curr_sprite.x-fetchX, 8); // positional, doesn't depend on 
+            if(reverse){
+                firstpxloff = (start==0)?8-end:-start; // depends on which side we are on
+            } else { 
+                firstpxloff = (start==0)?-start:8-end;
+            }
+
             for(int i = start; i < end; i++){
                 uint8_t col = get_color(fulltile, i+firstpxloff);
                 pixel_t pxl = {col, (uint8_t)(curr_sprite.flag&(1<<4)), (uint8_t)(curr_sprite.flag&(1<<7))};
@@ -228,6 +232,9 @@ void PPU::pxl_fetcher(){
                 }
             }
 
+            for(int i = 0; i < start; i++){
+                new_fgfifo.insert(new_fgfifo.begin(), temp);
+            }
             for(int i = end; i < 8; i++){
                 new_fgfifo.push_back(temp);
             }

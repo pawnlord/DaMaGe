@@ -919,9 +919,9 @@ void Clock::tick(){
                 timereg->TIMA = timereg->TMA;
             }
         }
-        if(count % 256 == 0){
-            timereg->DIV += 1;
-        }
+    }
+    if(count % 256 == 0){
+        timereg->DIV += 1;
     }
     count %= 4194304; // cycles per second 
     // TODO: Possibly delay here.

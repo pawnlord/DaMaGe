@@ -96,6 +96,9 @@ uint8_t Memory::handle_input(){
         if (input[SDL_SCANCODE_RIGHT]){
             *inp_reg &= ~(1<<0);
         }
+        if (input[SDL_SCANCODE_LCTRL]){
+            SDL_Delay(50);
+        }
     }
     if((*inp_reg & (1<<5)) == 0){
         if(input[SDL_SCANCODE_W]){
@@ -128,6 +131,9 @@ void Memory::set(uint8_t v, uint16_t addr){
             switch(addr){
                 case 0xFF00:
                     raw_mem[addr] = (raw_mem[addr] & ~(0b11<<4)) | (v & ~0xCF);
+                break;
+                case 0xFF04:
+                    timereg->DIV = 0;
                 break;
                 case 0xFF46:
                     DMA_highnib = v*0x100;
