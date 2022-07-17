@@ -1,6 +1,7 @@
 #ifndef GBPPU_H
 #define GBPPU_H
 #include <cstdint>
+#undef _WIN32_WINNT
 #include <cmath>
 #include <vector>
 #include <queue>
@@ -58,7 +59,10 @@ class PPU{
    
     object_t *OAM;
     std::vector<object_t> fetchedobjs;
-    std::queue<pixel_t> fgfifo, bgfifo;
+    std::vector<object_t> currobjs;
+    std::vector<pixel_t> fgfifo;
+    int currobjidx;
+    std::queue<pixel_t> bgfifo;
     enum mode_e {M0 = 0, M1, M2, M3} mode;
     int dots = 0;
     uint8_t *LY, *LYC, *SCX, *SCY, *WX, *WY;
