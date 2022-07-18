@@ -35,7 +35,7 @@ void print_cart_info(cart_info* inf);
 
 uint8_t getmbctype(uint8_t* data);
 
-MBC mbc_from_file(std::string filename);
+MBC *mbc_from_file(std::string filename);
 
 class Memory{
     public:
@@ -56,7 +56,7 @@ class Memory{
     void reset_int(uint8_t flags);
     void reset_regs();
     void tick();
-    MBC mbc;
+    MBC *mbc;
     uint8_t *raw_mem;
     bool *input; // input from sdl
     private:

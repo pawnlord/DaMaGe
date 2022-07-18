@@ -1,7 +1,7 @@
 #include "gbmem.h"
 #include <SDL2/SDL.h>
 
-MBC mbc_from_file(std::string filename){
+MBC *mbc_from_file(std::string filename){
     std::ifstream ifs (filename, std::ifstream::binary);
     std::filebuf* pbuf = ifs.rdbuf();
     std::size_t size = pbuf->pubseekoff (0,ifs.end,ifs.in);
@@ -14,24 +14,24 @@ MBC mbc_from_file(std::string filename){
     
     uint8_t t = getmbctype(full);
     std::cout << t << std::endl;
-    MBC mbc;
+    MBC* mbc;
     switch (t){
         case 0:
         case 1:
-        mbc = MBC();
-        mbc.fromraw(full);
+        mbc = new MBC();
+        mbc->fromraw(full);
         break;
         case 5:
-        mbc = (MBC)(MBC3());
-        mbc.fromraw(full);
+        mbc = (MBC*)(new MBC3());
+        mbc->fromraw(full);
         break;
         default:
         std::cout << "Unknown/WIP MBC\n";
-        mbc = MBC();
-        mbc.fromraw(full);
+        mbc = new MBC();
+        mbc->fromraw(full);
         break;
     }
-    mbc.set_size(size);
+    mbc->set_size(size);
     return mbc;
 }
 
@@ -126,7 +126,7 @@ uint8_t Memory::get(uint16_t addr){
         return 0xFF; // Probably not the right value, but shouldn't be touched anyway
     }
     if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
-        return mbc.get(addr);
+        return mbc->get(addr);
     }
     switch(addr){
         case 0xFF00:
@@ -185,7 +185,7 @@ uint8_t& Memory::operator[](int idx){
 void Memory::set(uint8_t v, uint16_t addr){
     if(!inDMA || addr >= 0xFF80){
         if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
-            mbc.set(addr, v);
+            mbc->set(addr, v);
         } else{
             switch(addr){
                 case 0xFF00:
@@ -215,7 +215,7 @@ void Memory::tick(){
             inDMA = false;
         }
     }
-    mbc.tick();
+    mbc->tick();
 }
 
 void Memory::dump(){
@@ -227,7 +227,7 @@ void Memory::dump(){
 cart_info* Memory::load_cartridge(std::string filename){
     mbc = mbc_from_file(filename);   
     // load cartridge into inf
-    std::memcpy(&inf, mbc.full+0x100, sizeof(cart_info));
+    std::memcpy(&inf, mbc->full+0x100, sizeof(cart_info));
     reset_regs();
     print_cart_info(&inf);
     return &inf;

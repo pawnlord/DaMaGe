@@ -222,7 +222,7 @@ void CPU::run(){
                     std::cout << "temp" << temp << "\n";
                     mem->dump();
                     std::ofstream oftest ("mbc.dmp", std::ofstream::binary);
-                    oftest.write((char*)(mem->mbc.full), 0x10000);
+                    oftest.write((char*)(mem->mbc->full), 0x10000);
                     oftest.close();
                 }
             }
@@ -935,4 +935,5 @@ void CPU::print_info(){
     std::cout << "[" << (((*flags)&1<<7)?"Z":"-") << (((*flags)&1<<6)?"N":"-") << (((*flags)&1<<5)?"H":"-") << (((*flags)&1<<4)?"C":"-") << "]" << std::endl; 
     std::cout << "Interrupt Info: IME=" << IME << ", IF=" << (int)mem->get(0xFF0F) << ", IE=" << (int)mem->get(0xFFFF) << "\n"; 
     std::cout << "Video Info: S=" << (int)ppu->getstatfull() << ", C=" << (int)ppu->getlcdcfull() << std::endl;
+    mem->mbc->print_info();
 }

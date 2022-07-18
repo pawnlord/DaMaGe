@@ -9,13 +9,14 @@
 class MBC
 {
 public:
-    void fromfile(std::string filename);
-    void fromraw(uint8_t* data);
-    uint8_t get(uint16_t addr);
-    void set(uint16_t addr, uint8_t val);
+    virtual void fromfile(std::string filename);
+    virtual void fromraw(uint8_t* data);
+    virtual uint8_t get(uint16_t addr);
+    virtual void set(uint16_t addr, uint8_t val);
     uint8_t* full;
-    void tick(){} // unused by MBC 1
-    void set_size(int sz){ this->size = sz;}
+    virtual void tick(){} // unused by MBC 1
+    virtual void set_size(int sz){ this->size = sz;}
+    virtual void print_info();
 protected:
     char* externalmem;
     uint8_t lowbankreg = 0, hibankreg = 0;
@@ -25,12 +26,14 @@ protected:
 };
 
 class MBC3 : public MBC{
-    void fromfile(std::string filename);
-    void fromraw(uint8_t* data);
-    uint8_t get(uint16_t addr); 
-    void set(uint16_t addr, uint8_t val);
-    void tick();
+    virtual void fromfile(std::string filename);
+    virtual void fromraw(uint8_t* data);
+    virtual uint8_t get(uint16_t addr); 
+    virtual void set(uint16_t addr, uint8_t val);
+    virtual void tick();
     private:
+    uint8_t last_latch = 0xff;
+    bool latched = false;
     uint8_t regs[5];
     uint8_t ram_select = 0;
 };
