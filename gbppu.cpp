@@ -80,8 +80,8 @@ void PPU::init_drawpxl(){
     mode = M3;
 
     uint8_t offset = ((*SCX)%8);
-    fetchX = 0;//-offset;
-    displayX = 0;//-offset;
+    fetchX = -offset;
+    displayX = -offset;
     fetchWidth = WIDTH;//+ ((8-offset)%8);
 }
 
@@ -214,8 +214,8 @@ void PPU::pxl_fetcher(){
             bool reverse = curr_sprite.flag&(1<<5);
             int16_t firstpxloff;
             
-            uint8_t start = std::max(curr_sprite.x - 8 - fetchX, 0);
-            uint8_t end   = std::min(curr_sprite.x-fetchX, 8); // positional, doesn't depend on 
+            int16_t start = std::max(curr_sprite.x - 8 - fetchX, 0);
+            int16_t end   = std::min(curr_sprite.x-fetchX, 8); // positional, doesn't depend on 
             if(reverse){
                 firstpxloff = (start==0)?8-end:-start; // depends on which side we are on
             } else { 
@@ -290,7 +290,7 @@ void PPU::updt_drawpxl(){
                 lcd[i][(*LY)] = 0;
             }
         }
-        for(int i = 0; i < std::min(160-displayX, 8); i++){
+        for(int i = 0; i < 8; i++){
             pixel_t bg_pxl = bgfifo.front();
             bgfifo.pop();
             pixel_t fg_pxl = fgfifo[i];

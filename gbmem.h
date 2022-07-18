@@ -33,6 +33,10 @@ struct timereg_t{
 
 void print_cart_info(cart_info* inf);
 
+uint8_t getmbctype(uint8_t* data);
+
+MBC mbc_from_file(std::string filename);
+
 class Memory{
     public:
     Memory(bool *input);

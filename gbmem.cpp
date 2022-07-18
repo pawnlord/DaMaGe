@@ -1,6 +1,65 @@
 #include "gbmem.h"
 #include <SDL2/SDL.h>
 
+MBC mbc_from_file(std::string filename){
+    std::ifstream ifs (filename, std::ifstream::binary);
+    std::filebuf* pbuf = ifs.rdbuf();
+    std::size_t size = pbuf->pubseekoff (0,ifs.end,ifs.in);
+    uint8_t *full = (uint8_t*)malloc(size*sizeof(uint8_t));
+
+    pbuf->pubseekpos (0,ifs.in);
+    std::cout << size << std::endl;
+    pbuf->sgetn((char*)full, size);
+    ifs.close();
+    
+    uint8_t t = getmbctype(full);
+    std::cout << t << std::endl;
+    MBC mbc;
+    switch (t){
+        case 0:
+        case 1:
+        mbc = MBC();
+        mbc.fromraw(full);
+        break;
+        case 5:
+        mbc = (MBC)(MBC3());
+        mbc.fromraw(full);
+        break;
+        default:
+        std::cout << "Unknown/WIP MBC\n";
+        mbc = MBC();
+        mbc.fromraw(full);
+        break;
+    }
+    mbc.set_size(size);
+    return mbc;
+}
+
+uint8_t getmbctype(uint8_t* data){
+    uint8_t raw_type = data[0x147];
+    if(raw_type == 0){
+        return 0;
+    } else if(raw_type <= 0x3){
+        return 1;
+    } else if(raw_type <= 0x6){
+        return 2;
+    } else if(raw_type <= 0x9){
+        return 3;
+    } else if(raw_type <= 0xD){
+        return 4;
+    } else if(raw_type <= 0x13){
+        return 5;
+    } else if(raw_type <= 0x1E){
+        return 6;
+    } else if(raw_type == 0x20){
+        return 7;
+    } else if(raw_type == 0x22){
+        return 8;
+    } else {
+        return -1;
+    }
+}
+
 void print_cart_info(cart_info* inf) {
     std::cout << "Entry: " << std::hex << inf->entry_point << std::endl;
     std::cout << "Title: " << std::string((char*) inf->title) << std::endl;
@@ -156,6 +215,7 @@ void Memory::tick(){
             inDMA = false;
         }
     }
+    mbc.tick();
 }
 
 void Memory::dump(){
@@ -165,7 +225,7 @@ void Memory::dump(){
 }
 
 cart_info* Memory::load_cartridge(std::string filename){
-    mbc.fromfile(filename);   
+    mbc = mbc_from_file(filename);   
     // load cartridge into inf
     std::memcpy(&inf, mbc.full+0x100, sizeof(cart_info));
     reset_regs();
