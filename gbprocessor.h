@@ -7,7 +7,7 @@
 #include <cmath>
 #include <queue>
 #include <ctime>
-#define DEFAULT_SPEED 4194*4
+#define DEFAULT_SPEED 4194
 
 union gbreg {
     struct {
@@ -52,6 +52,7 @@ class CPU{
     void run();
     PPU *getppu();
     void print_info();
+    void set_change_speed(double ops_mult);
     private:
     gbreg* get_first_arg(int lowbyte, regtype_e* ishigh);
     gbreg* get_last_arg(int lowbyte, regtype_e* ishigh);
@@ -77,7 +78,7 @@ class CPU{
     // points to AF.r8l
     uint8_t *flags;
     uint8_t *tempp;
-
+    int change_speed = DEFAULT_SPEED * 2;
     // interrupt logic
     // pointers to interrupt flags
     uint8_t *IE, *IF;

@@ -202,8 +202,8 @@ void CPU::run(){
     while(true){
         uint8_t opcode = mem->get(regs.PC.r16);
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
-        if(mem->change_speed()){
-            clock->set_speed(DEFAULT_SPEED*2);
+        if(mem->is_change_speed()){
+            clock->set_speed(change_speed);
         } else {
             clock->set_speed(DEFAULT_SPEED);
         }
@@ -912,11 +912,15 @@ Clock::Clock(Memory *mem){
 void Clock::set_speed(int ops_per_mill){
     this->ops_per_mill = ops_per_mill;
 }
+void CPU::set_change_speed(double ops_mult){
+    change_speed = DEFAULT_SPEED * ops_mult;
+    std::cout << ops_mult;
+}
 
 // 4 Clock ticks at once
 void Clock::tick(){
     count += 4;
-    dot_diff += 4;
+    dot_diff += 1;
     bool timer_enabled = timereg->TAC & 0x4;
     if(timer_enabled){
         int tac_type = timereg->TAC & 0x3;

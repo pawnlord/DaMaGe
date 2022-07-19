@@ -62,11 +62,20 @@ void print_cart_info(cart_info* inf) {
     std::cout << "Title: " << std::string((char*) inf->title) << std::endl;
 }
 
-Memory::Memory(bool* input){
+Memory::Memory(bool* input, EmulatorConfig cfg){
     raw_mem = (uint8_t*) malloc(sizeof(uint8_t) * 0x10000);
     memset(raw_mem, 0, 0x10000);
     timereg = (timereg_t*)(raw_mem+0xFF04); // registers for dividers and timers 
     this->input = input;
+    kbs.a = cfg.layout[0].key;
+    kbs.b = cfg.layout[1].key;
+    kbs.select = cfg.layout[2].key;
+    kbs.start = cfg.layout[3].key;
+    kbs.up = cfg.layout[4].key;
+    kbs.down = cfg.layout[5].key;
+    kbs.left = cfg.layout[6].key;
+    kbs.right = cfg.layout[7].key;
+    kbs.speed_change = cfg.layout[8].key;
 }
 
 
@@ -139,31 +148,31 @@ uint8_t Memory::handle_input(){
     uint8_t original = *inp_reg & 0xf; // for interrupt
     *inp_reg |= (0xCf); // reset to default state
     if((*inp_reg & (1<<4)) == 0){
-        if(input[SDL_SCANCODE_DOWN]){
-            *inp_reg &= ~(1<<3);
-        }
-        if (input[SDL_SCANCODE_UP]){
+        if (input[kbs.up]){
             *inp_reg &= ~(1<<2);
         }
-        if (input[SDL_SCANCODE_LEFT]){
+        if(input[kbs.down]){
+            *inp_reg &= ~(1<<3);
+        }
+        if (input[kbs.left]){
             *inp_reg &= ~(1<<1);
         }
-        if (input[SDL_SCANCODE_RIGHT]){
+        if (input[kbs.right]){
             *inp_reg &= ~(1<<0);
         }
     }
     if((*inp_reg & (1<<5)) == 0){
-        if(input[SDL_SCANCODE_W]){
-            *inp_reg &= ~(1<<3);
+        if (input[kbs.a]){
+            *inp_reg &= ~(1<<0);
         }
-        if (input[SDL_SCANCODE_Q]){
-            *inp_reg &= ~(1<<2);
-        }
-        if (input[SDL_SCANCODE_S]){
+        if (input[kbs.b]){
             *inp_reg &= ~(1<<1);
         }
-        if (input[SDL_SCANCODE_A]){
-            *inp_reg &= ~(1<<0);
+        if (input[kbs.select]){
+            *inp_reg &= ~(1<<2);
+        }
+        if(input[kbs.start]){
+            *inp_reg &= ~(1<<3);
         }
     }
     if((*inp_reg & 0xf) != original){
@@ -175,8 +184,8 @@ uint8_t& Memory::operator[](int idx){
     return raw_mem[idx];
 }
 
-bool Memory::change_speed(){
-    return input[SDL_SCANCODE_LCTRL];
+bool Memory::is_change_speed(){
+    return input[kbs.speed_change];
 }
 
 void Memory::set(uint8_t v, uint16_t addr){

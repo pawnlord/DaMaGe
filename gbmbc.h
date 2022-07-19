@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <vector>
 #include <stdlib.h>
 // Memory Bank Controller for a cartridge
 

@@ -7,6 +7,7 @@
 #include <cstring>
 #include "constants.h"
 #include "gbmbc.h"
+#include "config.h"
 
 struct cart_info{
     uint32_t entry_point;
@@ -36,10 +37,21 @@ void print_cart_info(cart_info* inf);
 uint8_t getmbctype(uint8_t* data);
 
 MBC *mbc_from_file(std::string filename);
+struct key_bindings_t{
+    int up;
+    int down;
+    int left;
+    int right;
+    int a;
+    int b;
+    int select;
+    int start;
+    int speed_change;
+};
 
 class Memory{
     public:
-    Memory(bool *input);
+    Memory(bool *input, EmulatorConfig cfg);
     void dump();
     uint8_t get(uint16_t addr);
     uint8_t& operator[](int);
@@ -59,7 +71,8 @@ class Memory{
     MBC *mbc;
     uint8_t *raw_mem;
     bool *input; // input from sdl
-    bool change_speed();
+    bool is_change_speed();
+    key_bindings_t kbs;
     private:
     uint8_t DMA_counter = 0;
     uint16_t DMA_highnib = 0;
