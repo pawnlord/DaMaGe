@@ -198,7 +198,7 @@ void CPU::reti(){
 }
 void CPU::run(){
     static uint32_t temp = 0;
-    uint16_t address = 0;
+    uint16_t address = -1;
     while(true){
         uint8_t opcode = mem->get(regs.PC.r16);
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
@@ -857,17 +857,17 @@ int CPU::prefixop(uint8_t opcode){
 }
 
 void CPU::push(uint16_t dat){
+    regs.SP.r16-=1;
     mem->set(dat/0x100,regs.SP.r16);
     regs.SP.r16-=1;
     mem->set(dat%0x100,regs.SP.r16);
-    regs.SP.r16-=1;
 }
 
 void CPU::pop(uint16_t* dat){
-    regs.SP.r16+=1;
     (*dat) = mem->get(regs.SP.r16);
     regs.SP.r16+=1;
     (*dat) += mem->get(regs.SP.r16) * 0x100;
+    regs.SP.r16+=1;
     (*flags) &= 0xF0; // Make sure flags doesn't change   
 }
 

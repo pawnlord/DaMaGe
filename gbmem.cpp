@@ -183,6 +183,9 @@ uint8_t& Memory::operator[](int idx){
 }
 
 void Memory::set(uint8_t v, uint16_t addr){
+    if(addr == 0x97FF){
+        std::cout << "??\n";
+    }
     if(!inDMA || addr >= 0xFF80){
         if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
             mbc->set(addr, v);
