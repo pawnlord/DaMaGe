@@ -1,5 +1,5 @@
 #include "gbprocessor.h"
-
+#include <SDL2/SDL.h>
 
 void CPU::setbcdflags(uint8_t before, uint8_t operand, bool issub){
     setflag(6, issub);
@@ -899,11 +899,13 @@ Clock::Clock(Memory *mem){
     this->mem = mem;
     this->timereg = mem->timereg;
     count = 0;
+    last_time = std::clock();
 }
 
 // 4 Clock ticks at once
 void Clock::tick(){
     count += 4;
+    dot_diff += 4;
     bool timer_enabled = timereg->TAC & 0x4;
     if(timer_enabled){
         int tac_type = timereg->TAC & 0x3;
@@ -924,7 +926,14 @@ void Clock::tick(){
         timereg->DIV += 1;
     }
     count %= 4194304; // cycles per second 
-    // TODO: Possibly delay here.
+    if(dot_diff >= 4194*4){
+        int diff = 0;
+        while(diff == 1){
+            diff = (std::clock() - last_time) / (double)(CLOCKS_PER_SEC / 1000);
+        }
+        last_time = std::clock();
+        dot_diff = 0;
+    }
 }
 void CPU::print_info(){
     std::cout << std::hex << "A: " << (int)(regs.AF.hl.r8h) << " F: " << (int)(regs.AF.hl.r8l) << " (AF " << regs.AF.r16 << ")\n"; 

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cmath>
 #include <queue>
+#include <ctime>
 
 
 union gbreg {
@@ -21,7 +22,7 @@ struct regs_t{
     gbreg AF, BC, DE, HL, SP, PC;    
 };
 
-class Clock{
+class Clock{ // Also manages delta time
     public:
     Clock(Memory *mem);
     void tick();
@@ -31,6 +32,8 @@ class Clock{
     Memory *mem;
     timereg_t *timereg;
     int tac;
+    std::clock_t last_time;
+    int dot_diff = 0;
 };
 
 

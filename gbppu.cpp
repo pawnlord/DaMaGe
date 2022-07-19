@@ -89,7 +89,7 @@ void PPU::updt_oamscan(){
     static int objcount = 0;
     object_t obj = OAM[objcount];
 
-    bool is_in_line = ((*LY) >= obj.y-16) && ((*LY) <= (obj.y-16+(getlcdc(2)?16:8)));
+    bool is_in_line = ((*LY) >= obj.y-16) && ((*LY) < (obj.y-16+(getlcdc(2)?16:8)));
     if(is_in_line && lineobjs < 10 && totalobjs < 40){
         lineobjs++;
         if((*LY) == obj.y-16){
@@ -285,11 +285,6 @@ void PPU::updt_drawpxl(){
     pxl_fetcher();
     // display what is in the queue
     if(is_render_ready){
-        if(displayX > 0 && displayX < 8){
-            for(int i = 0; i < displayX; i++){
-                lcd[i][(*LY)] = 0;
-            }
-        }
         for(int i = 0; i < 8; i++){
             pixel_t bg_pxl = bgfifo.front();
             bgfifo.pop();

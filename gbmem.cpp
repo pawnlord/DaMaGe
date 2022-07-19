@@ -8,12 +8,10 @@ MBC *mbc_from_file(std::string filename){
     uint8_t *full = (uint8_t*)malloc(size*sizeof(uint8_t));
 
     pbuf->pubseekpos (0,ifs.in);
-    std::cout << size << std::endl;
     pbuf->sgetn((char*)full, size);
     ifs.close();
     
     uint8_t t = getmbctype(full);
-    std::cout << t << std::endl;
     MBC* mbc;
     switch (t){
         case 0:
@@ -61,9 +59,7 @@ uint8_t getmbctype(uint8_t* data){
 }
 
 void print_cart_info(cart_info* inf) {
-    std::cout << "Entry: " << std::hex << inf->entry_point << std::endl;
     std::cout << "Title: " << std::string((char*) inf->title) << std::endl;
-    std::cout << "Cart Type: " << std::hex << (int)inf->MBC_type << std::endl;
 }
 
 Memory::Memory(bool* input){
@@ -183,9 +179,6 @@ uint8_t& Memory::operator[](int idx){
 }
 
 void Memory::set(uint8_t v, uint16_t addr){
-    if(addr == 0x97FF){
-        std::cout << "??\n";
-    }
     if(!inDMA || addr >= 0xFF80){
         if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
             mbc->set(addr, v);
