@@ -22,8 +22,8 @@ EmulatorConfig::EmulatorConfig(std::string filename){
     ops_mult = 2;
     layout[0] = {"A", SDL_SCANCODE_A};
     layout[1] = {"B", SDL_SCANCODE_S};
-    layout[2] = {"SLCT", SDL_SCANCODE_Q};
-    layout[3] = {"STRT", SDL_SCANCODE_W};
+    layout[2] = {"SELECT", SDL_SCANCODE_Q};
+    layout[3] = {"START", SDL_SCANCODE_W};
     layout[4] = {"U", SDL_SCANCODE_UP};
     layout[5] = {"D", SDL_SCANCODE_DOWN};
     layout[6] = {"L", SDL_SCANCODE_LEFT};
@@ -52,7 +52,7 @@ EmulatorConfig::EmulatorConfig(std::string filename){
                 }
                 break;
             }
-            if(token == "SPEED"){
+            if(token == "SPEED_MULT"){
                 if(std::getline(linestream, token, '\r')){
                     ops_mult = std::atof(token.c_str());
                 }
