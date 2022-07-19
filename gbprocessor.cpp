@@ -914,7 +914,6 @@ void Clock::set_speed(int ops_per_mill){
 }
 void CPU::set_change_speed(double ops_mult){
     change_speed = DEFAULT_SPEED * ops_mult;
-    std::cout << ops_mult;
 }
 
 // 4 Clock ticks at once

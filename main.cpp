@@ -3,6 +3,7 @@
 #include <time.h>
 int main(int argc, char** argv){
     std::string cartridge_name;
+    std::string config_name = "";
     if(argc == 1){
         std::cout << "[DaMaGe] Input name of ROM you would like to play (no spaces): " << std::endl;
         std::string game;
@@ -14,6 +15,12 @@ int main(int argc, char** argv){
                 std::cout << "DaMaGe - Original Gameboy Emulator" << std::endl;
                 std::cout << "Version 1.0.0" << std::endl;
                 return 0;
+            } else if(std::string(argv[i]) == "-c" || std::string(argv[i]) == "--config"){
+                if(++i < argc){
+                    config_name = argv[i];
+                } else {
+                    std::cerr << "[DaMaGe] Expected custom config, but none provided.\n";
+                }
             } else {
                 cartridge_name = argv[i];    
             }
@@ -21,7 +28,12 @@ int main(int argc, char** argv){
     }
 
     GameboyDisplay gd;
-    EmulatorConfig cfg("test.cfg");
+    EmulatorConfig cfg;
+    
+    if(config_name != ""){
+        cfg = EmulatorConfig(config_name);
+    }
+
     Memory mem(gd.gm.input, cfg);
     
     mem.load_cartridge(cartridge_name);

@@ -3,7 +3,7 @@
 
 EmulatorConfig::EmulatorConfig(){
     ops_mult = 2;
-    layout[0] = {"A", SDL_SCANCODE_B};
+    layout[0] = {"A", SDL_SCANCODE_A};
     layout[1] = {"B", SDL_SCANCODE_S};
     layout[2] = {"SLCT", SDL_SCANCODE_Q};
     layout[3] = {"STRT", SDL_SCANCODE_W};
