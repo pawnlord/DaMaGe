@@ -202,6 +202,12 @@ void CPU::run(){
     while(true){
         uint8_t opcode = mem->get(regs.PC.r16);
         uint8_t h = opcode/0x10, l = opcode%0x10; // get highest bit
+        if(mem->change_speed()){
+            clock->set_speed(DEFAULT_SPEED*2);
+        } else {
+            clock->set_speed(DEFAULT_SPEED);
+        }
+        
         temp += 1;
         if(debug){
             cycles_to_run -= 1;
@@ -872,6 +878,7 @@ void CPU::pop(uint16_t* dat){
 }
 
 bool CPU::tick(uint8_t cpu_cycles){
+    
     for(int i = 0; i < cpu_cycles; i++){
         clock->tick();
         ppu->tick();
@@ -902,6 +909,10 @@ Clock::Clock(Memory *mem){
     last_time = std::clock();
 }
 
+void Clock::set_speed(int ops_per_mill){
+    this->ops_per_mill = ops_per_mill;
+}
+
 // 4 Clock ticks at once
 void Clock::tick(){
     count += 4;
@@ -926,9 +937,9 @@ void Clock::tick(){
         timereg->DIV += 1;
     }
     count %= 4194304; // cycles per second 
-    if(dot_diff >= 4194*4){
+    if(dot_diff >= ops_per_mill){
         int diff = 0;
-        while(diff == 1){
+        while(diff == 0){
             diff = (std::clock() - last_time) / (double)(CLOCKS_PER_SEC / 1000);
         }
         last_time = std::clock();

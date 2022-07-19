@@ -14,9 +14,10 @@ The usage is currently pretty basic, I plan to add some sort of interface when m
 DaMaGe <ROM_name>
 ```
 As for using the emulator part, the controls for now are as follows:  
-|  A  |  B  |select|start|   D-Pad  |
-|-----|-----|------|-----|----------|
-|  A  |  S  |  Q   |  W  |Arrow Keys|
+|  A  |  B  |select|start|   D-Pad  |  L-Ctrl      |
+|-----|-----|------|-----|----------|--------------|
+|  A  |  S  |  Q   |  W  |Arrow Keys| Change Speed*|
+<sup>* Currently double speed</sup>
 
 ## TODO
  - Fix weird sprite issues

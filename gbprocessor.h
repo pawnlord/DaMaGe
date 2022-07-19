@@ -7,7 +7,7 @@
 #include <cmath>
 #include <queue>
 #include <ctime>
-
+#define DEFAULT_SPEED 4194*4
 
 union gbreg {
     struct {
@@ -26,6 +26,7 @@ class Clock{ // Also manages delta time
     public:
     Clock(Memory *mem);
     void tick();
+    void set_speed(int ops_per_mill);
 
     private:
     int count;
@@ -33,6 +34,7 @@ class Clock{ // Also manages delta time
     timereg_t *timereg;
     int tac;
     std::clock_t last_time;
+    int ops_per_mill = DEFAULT_SPEED;
     int dot_diff = 0;
 };
 

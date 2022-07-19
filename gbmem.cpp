@@ -151,9 +151,6 @@ uint8_t Memory::handle_input(){
         if (input[SDL_SCANCODE_RIGHT]){
             *inp_reg &= ~(1<<0);
         }
-        if (input[SDL_SCANCODE_LCTRL]){
-            SDL_Delay(50);
-        }
     }
     if((*inp_reg & (1<<5)) == 0){
         if(input[SDL_SCANCODE_W]){
@@ -176,6 +173,10 @@ uint8_t Memory::handle_input(){
 }
 uint8_t& Memory::operator[](int idx){
     return raw_mem[idx];
+}
+
+bool Memory::change_speed(){
+    return input[SDL_SCANCODE_LCTRL];
 }
 
 void Memory::set(uint8_t v, uint16_t addr){

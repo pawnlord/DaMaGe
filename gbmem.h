@@ -59,6 +59,7 @@ class Memory{
     MBC *mbc;
     uint8_t *raw_mem;
     bool *input; // input from sdl
+    bool change_speed();
     private:
     uint8_t DMA_counter = 0;
     uint16_t DMA_highnib = 0;
