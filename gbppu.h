@@ -67,6 +67,7 @@ class PPU{
     int dots = 0;
     uint8_t *LY, *LYC, *SCX, *SCY, *WX, *WY;
     int fetchX = 0, displayX = 0, fetchWidth = WIDTH;
+    int wait = 0;
 };
 
 

@@ -188,6 +188,14 @@ bool Memory::is_change_speed(){
     return input[kbs.speed_change];
 }
 
+
+void Memory::print_changes(){
+    for(int i = 0; i < changes.size(); i++){
+        std::cout << std::dec << i << std::hex << ": 0x" << changes[i].addr << ", 0x" << (int)changes[i].oldb << "->0x" << (int)changes[i].newb << std::endl; 
+    }
+    changes.clear();
+}
+
 void Memory::set(uint8_t v, uint16_t addr){
     if(!inDMA || addr >= 0xFF80){
         if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
@@ -204,6 +212,8 @@ void Memory::set(uint8_t v, uint16_t addr){
                     DMA_highnib = v*0x100;
                     DMA_counter = 0;
                     inDMA = true;
+                break;
+                case 0xFF44:
                 break;
                 default:
                     raw_mem[addr] = v;

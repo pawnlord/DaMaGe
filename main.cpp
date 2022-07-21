@@ -28,6 +28,12 @@ int main(int argc, char** argv){
     }
 
     GameboyDisplay gd;
+#ifdef DEBUG_TOOLBAR
+    std::vector<std::string> data;
+    gd.gm.add_data_ptr(&data);
+    data.push_back("longer looking  test");
+#endif
+
     EmulatorConfig cfg;
     
     if(config_name != ""){

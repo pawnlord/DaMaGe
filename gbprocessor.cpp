@@ -209,10 +209,12 @@ void CPU::run(){
         
         temp += 1;
         if(debug){
+            mem->debug = true;
             cycles_to_run -= 1;
             if(cycles_to_run == 0 || regs.PC.r16 == address){
                 std::string inp;
                 print_info();
+                mem->print_changes();
                 std::cout << regs.PC.r16 << " " << (int)opcode << "(" << (int)mem->get(regs.PC.r16+1) << "," << (int)mem->get(regs.PC.r16+2) <<  ")" << "\n";
                 std::cin >> inp;
                 if(inp.substr(0,5) == "break"){

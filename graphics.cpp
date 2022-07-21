@@ -98,18 +98,35 @@ void GraphicsManager::render_cb(){
             }
         }
 
-
         // update pixels
         this->loop->update_gm_pixels();
         // Pixel renderer
         SDL_RenderClear(ren);
+
+
         for(int i = 0; i < w; i++){
             for(int j = 0; j < h; j++){
                 SDL_SetRenderDrawColor(ren, pixs[i][j].r, pixs[i][j].g, pixs[i][j].b, 255);
                 SDL_RenderFillRect(ren, &pixs[i][j]);
             }
         }
-        SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+        // Toolbar code
+#ifdef DEBUG_TOOLBAR
+        // display information given to us from data
+        std::string text = "";
+        for(int i = 0; i < data->size(); i++){
+            text += data->at(i) + " -- "; 
+        }
+
+        SDL_Surface* surfaceMessage = TTF_RenderText_Solid(f, text.c_str(), {255,125,125});
+            
+        SDL_Texture* text_txtr = SDL_CreateTextureFromSurface(ren, surfaceMessage); 
+        SDL_Rect text_r = {0,0,w*s, head};
+        SDL_RenderCopy(ren, text_txtr, NULL, &text_r);
+        SDL_FreeSurface(surfaceMessage);
+        SDL_DestroyTexture(text_txtr);
+#endif
+        SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
         SDL_RenderPresent(ren);
         this->runmx.unlock(); 
     }
@@ -133,6 +150,10 @@ GraphicsManager::GraphicsManager(std::string name, int w, int h, int s, int head
     for(int i = 0; i < 255; i++){
         input[i] = false;
     }
+#ifdef DEBUG_TOOLBAR
+    TTF_Init();
+    f = TTF_OpenFont("ubmono.ttf", h);        
+#endif
 }
 
 void GraphicsManager::start(){
@@ -143,3 +164,9 @@ void GraphicsManager::start(){
 void GraphicsManager::add_loop(MainLoop* mainloop){
     this->loop = mainloop;
 }
+
+#ifdef DEBUG_TOOLBAR
+void GraphicsManager::add_data_ptr(std::vector<std::string> *data){
+    this->data = data;
+}    
+#endif

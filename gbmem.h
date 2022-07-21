@@ -68,9 +68,11 @@ class Memory{
     void reset_int(uint8_t flags);
     void reset_regs();
     void tick();
+    void print_changes();
     MBC *mbc;
     uint8_t *raw_mem;
     bool *input; // input from sdl
+    bool debug = false;
     bool is_change_speed();
     key_bindings_t kbs;
     private:
@@ -79,6 +81,8 @@ class Memory{
     bool inDMA = false;
     uint8_t handle_input();
     cart_info inf;
+    struct change_t{uint8_t oldb; uint8_t newb; uint16_t addr;};
+    std::vector<change_t> changes;
 };
 
 
