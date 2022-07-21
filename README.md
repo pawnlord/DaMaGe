@@ -42,6 +42,7 @@ The values for the key bind options come from [the SDL library](https://wiki.lib
 ## TODO
  - Fix weird sprite issues
  - Serial input over network (Biggest goal)
+ - Save States
  - Saves
  - GUI implemented
     - Possibly CLI style?

@@ -43,7 +43,6 @@ CPU::CPU(Memory *mem, Clock*clock){
     halt_flag = false;
     IE = mem->getref(0xFFFF);
     IF = mem->getref(0xFF0F);
-    tempp = mem->raw_mem;
 }
 PPU *CPU::getppu(){
     return ppu;
@@ -403,6 +402,7 @@ void CPU::run(){
                 setbcddir((regs.HL.r16 & 0xFFF) + (val & 0xFFF) > 0xFFF, false);
                 regs.HL.r16 = regs.HL.r16 + val;
                 regs.PC.r16+=1;
+                ticks = 2;
             }
             if(l == 0xA){
                 if(firstarg == &regs.AF){
@@ -418,6 +418,7 @@ void CPU::run(){
                         regs.HL.r16 += 1;
                     }
                 }
+                ticks = 2;
                 //std::cout << regs.HL.r16 << std::endl;
             }
             if(l == 0xB){
@@ -579,15 +580,15 @@ void CPU::run(){
                 regs.PC.r16 += 1;
                 ticks = 3;
             }
-            else if(l == 0xF){
-                push(regs.PC.r16+1);
-                uint16_t addr = 0x8 + (h-0xC)*0x10;
-                regs.PC.r16 = addr;
-                ticks = 4;
-            }
             else if(l == 0x7){
                 push(regs.PC.r16+1);
                 uint16_t addr = (h-0xC)*0x10;    
+                regs.PC.r16 = addr;
+                ticks = 4;
+            }
+            else if(l == 0xF){
+                push(regs.PC.r16+1);
+                uint16_t addr = 0x8 + (h-0xC)*0x10;
                 regs.PC.r16 = addr;
                 ticks = 4;
             }
@@ -731,6 +732,7 @@ void CPU::run(){
                         uint8_t val = mem->get(addr);
                         regs.AF.hl.r8h = val;
                     }
+                    ticks = 4;
                     regs.PC.r16 += 1;
                 }
                 if(l == 0xB){
@@ -923,12 +925,21 @@ void Clock::tick(){
     bool timer_enabled = timereg->TAC & 0x4;
     if(timer_enabled){
         int tac_type = timereg->TAC & 0x3;
-        if(tac_type == 0){
-            tac = 1024;
-        } else {
-            tac = 4*pow(4, tac_type);
+        switch(tac_type){
+            case 0:
+            clock_freq = 1024;
+            break;
+            case 1:
+            clock_freq = 16;
+            break;
+            case 2:
+            clock_freq = 64;
+            break;
+            case 3:
+            clock_freq = 256;
+            break;
         }
-        if(count % tac == 0 ){
+        if(count % clock_freq == 0 ){
             timereg->TIMA+=1;
             if(timereg->TIMA == 0){
                 mem->req_int(0x4); // Request Timer interrupt

@@ -11,6 +11,7 @@ EmulatorConfig::EmulatorConfig(){
     layout[5] = {"D", SDL_SCANCODE_DOWN};
     layout[6] = {"L", SDL_SCANCODE_LEFT};
     layout[7] = {"R", SDL_SCANCODE_RIGHT};
+    layout[8] = {"SPEED_CHANGE", SDL_SCANCODE_LCTRL};
 }
 
 SDL_Scancode string_to_scancode(std::string keyname){

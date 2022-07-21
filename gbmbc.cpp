@@ -33,7 +33,7 @@ uint8_t MBC::get(uint16_t addr){
         }
         return full[realaddr];
     } else {
-        uint32_t realaddr = (addr - 0xA000) | (hibankreg<<13);
+        uint32_t realaddr = (mode)? (addr - 0xA000) : (addr - 0xA000) | (hibankreg<<13);
         return externalmem[realaddr];
     }
 } //0x0-0x7FFF

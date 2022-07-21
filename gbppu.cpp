@@ -36,7 +36,7 @@ void PPU::tick(){
         // std::cout << (int)(*LY) << std::endl;
         mode = ((*LY)>143)?M1:M2;
         
-        if(((*STAT) & 0x1<<(3+mode)) > 0){ // switch mode 
+        if(((*STAT) & 0x1<<(3+mode)) > 0 && mode != M3){ // switch mode 
             if(mem->get_int_enabled(0x2))
                 mem->req_int(0x2);
         }

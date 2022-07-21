@@ -29,12 +29,12 @@ class Clock{ // Also manages delta time
     void set_speed(int ops_per_mill);
 
     private:
+    int ops_per_mill = DEFAULT_SPEED;
     int count;
     Memory *mem;
     timereg_t *timereg;
-    int tac;
+    int clock_freq;
     std::clock_t last_time;
-    int ops_per_mill = DEFAULT_SPEED;
     int dot_diff = 0;
 };
 
@@ -77,12 +77,11 @@ class CPU{
     regs_t regs;
     // points to AF.r8l
     uint8_t *flags;
-    uint8_t *tempp;
     int change_speed = DEFAULT_SPEED * 2;
     // interrupt logic
     // pointers to interrupt flags
     uint8_t *IE, *IF;
-    bool debug = false;
+    bool debug = true;
     uint32_t cycles_to_run = 1;    
 };
 
