@@ -131,7 +131,6 @@ void PPU::pxl_fetcher(){
             fetcherX = (fetchX - ((*WX) - 7)) / 8;
             fetcherY = ((*LY) - (*WY)) / 8;    
         }
-
         tile = mem->get(tilemap + (fetcherX + fetcherY*32));
         state = (state_e)(((int)state) + 1);
     } else if(state == GET_LOW){
@@ -285,6 +284,7 @@ void PPU::updt_drawpxl(){
     pxl_fetcher();
     // display what is in the queue
     if(is_render_ready){
+
         for(int i = 0; i < 8; i++){
             pixel_t bg_pxl = bgfifo.front();
             bgfifo.pop();
@@ -316,4 +316,8 @@ uint8_t PPU::getstatfull(){
 }
 uint8_t PPU::getlcdcfull(){
     return (*LCDC);
+}
+void PPU::add_debug_vector(std::vector<std::string> *dbg){
+    this->dbg = dbg;
+    has_dbg_vec = true;
 }

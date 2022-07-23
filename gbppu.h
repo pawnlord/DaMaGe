@@ -39,6 +39,7 @@ class PPU{
     uint8_t getlcdcfull();
     bool ppu_enabled();
     layer lcd;
+    void add_debug_vector(std::vector<std::string> *dbg);
     private:
     void init_drawpxl();
     void updt_oamscan();
@@ -68,6 +69,8 @@ class PPU{
     uint8_t *LY, *LYC, *SCX, *SCY, *WX, *WY;
     int fetchX = 0, displayX = 0, fetchWidth = WIDTH;
     int wait = 0;
+    std::vector<std::string> *dbg;
+    bool has_dbg_vec = false;
 };
 
 

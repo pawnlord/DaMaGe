@@ -21,6 +21,9 @@ void MBC::fromraw(uint8_t* data){
     externalmem = (char*)malloc(2<<14);
 }
 
+bool MBC::isramenabled(){
+    return RAMEnabled;
+}
 
 uint8_t MBC::get(uint16_t addr){
     if(addr <= 0x3FFF){
@@ -79,6 +82,9 @@ void MBC3::fromfile(std::string filename){
 void MBC3::fromraw(uint8_t* data){
     full = data;
     externalmem = (char*)malloc(2<<14);
+}
+bool MBC3::isramenabled(){
+    return RAMEnabled;
 }
 uint8_t MBC3::get(uint16_t addr){
     if(addr <= 0x3FFF){

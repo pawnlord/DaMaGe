@@ -130,7 +130,7 @@ uint8_t Memory::get(uint16_t addr){
     if(inDMA && addr < 0xFF80){
         return 0xFF; // Probably not the right value, but shouldn't be touched anyway
     }
-    if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
+    if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF && mbc->isramenabled())){
         return mbc->get(addr);
     }
     switch(addr){
@@ -197,8 +197,11 @@ void Memory::print_changes(){
 }
 
 void Memory::set(uint8_t v, uint16_t addr){
+    if(addr == 0x9100){
+        std::cout << "backwards" << std::endl;
+    }
     if(!inDMA || addr >= 0xFF80){
-        if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF)){
+        if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF && mbc->isramenabled())){
             mbc->set(addr, v);
         } else{
             switch(addr){

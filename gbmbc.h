@@ -18,6 +18,7 @@ public:
     virtual void tick(){} // unused by MBC 1
     virtual void set_size(int sz){ this->size = sz;}
     virtual void print_info();
+    virtual bool isramenabled();
 protected:
     char* externalmem;
     uint8_t lowbankreg = 0, hibankreg = 0;
@@ -32,6 +33,7 @@ class MBC3 : public MBC{
     virtual uint8_t get(uint16_t addr); 
     virtual void set(uint16_t addr, uint8_t val);
     virtual void tick();
+    virtual bool isramenabled();
     private:
     uint8_t last_latch = 0xff;
     bool latched = false;

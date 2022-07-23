@@ -28,11 +28,7 @@ int main(int argc, char** argv){
     }
 
     GameboyDisplay gd;
-#ifdef DEBUG_TOOLBAR
-    std::vector<std::string> data;
-    gd.gm.add_data_ptr(&data);
-    data.push_back("longer looking  test");
-#endif
+
 
     EmulatorConfig cfg;
     
@@ -47,6 +43,11 @@ int main(int argc, char** argv){
     Clock clock(&mem);
     CPU cpu(&mem, &clock);
 
+#ifdef DEBUG_TOOLBAR
+    std::vector<std::string> data;
+    gd.gm.add_data_ptr(&data);
+    cpu.getppu()->add_debug_vector(&data);
+#endif
     cpu.set_change_speed(cfg.ops_mult);
 
     gd.add_ppu(cpu.getppu());
