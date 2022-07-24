@@ -13,6 +13,7 @@ public:
     virtual void fromfile(std::string filename);
     virtual void fromraw(uint8_t* data);
     virtual uint8_t get(uint16_t addr);
+    virtual uint8_t *getref(uint16_t addr);
     virtual void set(uint16_t addr, uint8_t val);
     uint8_t* full;
     virtual void tick(){} // unused by MBC 1
@@ -20,7 +21,7 @@ public:
     virtual void print_info();
     virtual bool isramenabled();
 protected:
-    char* externalmem;
+    uint8_t* externalmem;
     uint8_t lowbankreg = 0, hibankreg = 0;
     bool RAMEnabled = false;
     bool mode = false;
@@ -31,6 +32,7 @@ class MBC3 : public MBC{
     virtual void fromfile(std::string filename);
     virtual void fromraw(uint8_t* data);
     virtual uint8_t get(uint16_t addr); 
+    virtual uint8_t *getref(uint16_t addr);
     virtual void set(uint16_t addr, uint8_t val);
     virtual void tick();
     virtual bool isramenabled();

@@ -197,9 +197,6 @@ void Memory::print_changes(){
 }
 
 void Memory::set(uint8_t v, uint16_t addr){
-    if(addr == 0x9100){
-        std::cout << "backwards" << std::endl;
-    }
     if(!inDMA || addr >= 0xFF80){
         if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF && mbc->isramenabled())){
             mbc->set(addr, v);
@@ -254,6 +251,9 @@ cart_info* Memory::load_cartridge(std::string filename){
 
 
 uint8_t* Memory::getref(uint16_t addr){
+    if(addr <= 0x7FFF || (addr >= 0xA000 && addr <= 0xBFFF && mbc->isramenabled())){
+        return mbc->getref(addr);
+    }
     return raw_mem+addr;
 }
 
@@ -281,3 +281,5 @@ uint8_t Memory::get_int_num(){
     }
     return -1;
 }
+//5892
+//5895

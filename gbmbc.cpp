@@ -14,11 +14,11 @@ void MBC::fromfile(std::string filename){
     pbuf->sgetn((char*)full, size);
     ifs.close();
 
-    externalmem = (char*)malloc(2<<14);
+    externalmem = (uint8_t*)malloc(2<<14);
 }
 void MBC::fromraw(uint8_t* data){
     full = data;
-    externalmem = (char*)malloc(2<<14);
+    externalmem = (uint8_t*)malloc(2<<14);
 }
 
 bool MBC::isramenabled(){
@@ -39,7 +39,23 @@ uint8_t MBC::get(uint16_t addr){
         uint32_t realaddr = (mode)? (addr - 0xA000) : (addr - 0xA000) | (hibankreg<<13);
         return externalmem[realaddr];
     }
-} //0x0-0x7FFF
+}
+
+uint8_t *MBC::getref(uint16_t addr){
+   if(addr <= 0x3FFF){
+        uint32_t realaddr = (mode)? addr | (hibankreg<<19):addr;
+        return full+realaddr;
+    } else if (addr <= 0x7FFF){
+        uint32_t realaddr = (addr - 0x4000) | (lowbankreg<<14) | (hibankreg<<19);
+        if(lowbankreg == 0 && hibankreg == 0){
+            realaddr += 0x4000;
+        }
+        return full+realaddr;
+    } else {
+        uint32_t realaddr = (mode)? (addr - 0xA000) : (addr - 0xA000) | (hibankreg<<13);
+        return externalmem+realaddr;
+    }
+}
 void MBC::set(uint16_t addr, uint8_t val){
     if(addr <= 0x1FFF){
         RAMEnabled = (val & 0xA) == 0xA;
@@ -77,11 +93,11 @@ void MBC3::fromfile(std::string filename){
     pbuf->sgetn((char*)full, size);
     ifs.close();
 
-    externalmem = (char*)malloc(2<<14);
+    externalmem = (uint8_t*)malloc(2<<14);
 }
 void MBC3::fromraw(uint8_t* data){
     full = data;
-    externalmem = (char*)malloc(2<<14);
+    externalmem = (uint8_t*)malloc(2<<14);
 }
 bool MBC3::isramenabled(){
     return RAMEnabled;
@@ -106,6 +122,22 @@ uint8_t MBC3::get(uint16_t addr){
     }
 }
 
+
+uint8_t *MBC3::getref(uint16_t addr){
+   if(addr <= 0x3FFF){
+        uint32_t realaddr = (mode)? addr | (hibankreg<<19):addr;
+        return full+realaddr;
+    } else if (addr <= 0x7FFF){
+        uint32_t realaddr = (addr - 0x4000) | (lowbankreg<<14) | (hibankreg<<19);
+        if(lowbankreg == 0 && hibankreg == 0){
+            realaddr += 0x4000;
+        }
+        return full+realaddr;
+    } else {
+        uint32_t realaddr = (mode)? (addr - 0xA000) : (addr - 0xA000) | (hibankreg<<13);
+        return externalmem+realaddr;
+    }
+}
 void MBC3::set(uint16_t addr, uint8_t val){
 
     if(addr <= 0x1FFF){
@@ -142,7 +174,7 @@ void MBC3::tick(){
             regs[1] = t->tm_min;
             regs[2] = t->tm_hour;
             regs[3] = t->tm_yday & 0xFF;
-            regs[4] = (regs[4] & ~0x1) | ((t->tm_yday & 0x100)>>7);
+            regs[4] = (regs[4] & ~0x1) | ((t->tm_yday & 0x100)>>8);
             regs[4] = (regs[4] & ~0x40);
             
         }
