@@ -1,6 +1,6 @@
 # DaMaGe
 Original Gameboy (DMG) emulator written in C++  
-Version 1.0.0
+Version 1.1.0
 
 ## building/dependencies
 Currently, this project requires SFML and (on windows) a MinGW thread library.  
@@ -40,7 +40,6 @@ SPEED_MULT
 The first 9 correspond to the table above, while the last changes the speed multiplier when pressing Change Speed.  
 The values for the key bind options come from [the SDL library](https://wiki.libsdl.org/SDL_Scancode). The value for SPEED_MULT is a floating-point number.
 ## TODO
- - Fix weird sprite issues
  - Serial input over network (Biggest goal)
  - Save States
  - Saves
