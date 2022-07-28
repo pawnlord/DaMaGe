@@ -2,12 +2,13 @@
 #include <SDL2/SDL.h>
 
 std::string get_romname(std::string filename){
+    std::string name = filename;
     for(int i = 0; i < filename.length(); i++){
         if(filename[i] == '.'){
-            return filename.substr(0, i); // gets up to one before i
+            name = filename.substr(0, i); // gets up to one before i
         }
     }
-    return filename;
+    return name;
 }
 
 
@@ -276,10 +277,10 @@ void Memory::tick(){
     mbc->tick();
 }
 
-void Memory::load_from_save_state(){
+void Memory::load_save_state(){
     mbc = mbc_from_savestate(this->svstate);
-    raw_mem = svstate.ram;
-    mbc->externalmem = svstate.extram;
+    std::memcpy(raw_mem, svstate.ram, 0x10000);
+    std::memcpy(mbc->externalmem , svstate.extram, svstate.external_ram_size);
 }
 
 void Memory::dump(){

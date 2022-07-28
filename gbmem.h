@@ -84,7 +84,7 @@ class Memory{
     bool btnPressLimiter = false, awaitingSave = false;
     savestate_t svstate;
     void finish_save_state();
-    void load_from_save_state();
+    void load_save_state();
     bool is_change_speed();
     key_bindings_t kbs;
     private:

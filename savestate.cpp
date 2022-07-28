@@ -73,8 +73,8 @@ void savestate_t::load(std::string title){
     }
 
     add_rom(raw_buf+HEADER_SIZE, rom_size);
-    add_ext_ram(raw_buf+extramp, external_ram_size);
-    add_ram(raw_buf+ramp);
+    add_ext_ram(raw_buf+HEADER_SIZE+rom_size, external_ram_size);
+    add_ram(raw_buf+HEADER_SIZE+rom_size+external_ram_size);
     
     free(raw_buf);
 }

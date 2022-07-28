@@ -898,7 +898,7 @@ void CPU::savestate_handler(){
         mem->btnPressLimiter = true;
         mem->svstate = savestate_t();
         mem->svstate.load(mem->rom_name);
-        mem->load_from_save_state();
+        mem->load_save_state();
         for(int i = 0; i < 6; i++){
             (((&regs.AF)+i))->r16 = mem->svstate.regs[i]; // stupid casting hack
         }
