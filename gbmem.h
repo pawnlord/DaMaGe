@@ -8,6 +8,7 @@
 #include "constants.h"
 #include "gbmbc.h"
 #include "config.h"
+#include "savestate.h"
 
 struct cart_info{
     uint32_t entry_point;
@@ -32,7 +33,11 @@ struct timereg_t{
     uint8_t TAC;
 };
 
+std::string get_romname(std::string filename);
+
 void print_cart_info(cart_info* inf);
+
+uint8_t getmbctypefromnum(uint8_t raw_type);
 
 uint8_t getmbctype(uint8_t* data);
 
@@ -47,6 +52,8 @@ struct key_bindings_t{
     int select;
     int start;
     int speed_change;
+    int svstate_sv;
+    int svstate_ld;
 };
 
 class Memory{
@@ -58,6 +65,7 @@ class Memory{
     void set(uint8_t v, uint16_t addr);
     cart_info* load_cartridge(std::string filename);
     timereg_t* timereg;
+    std::string rom_name; // no extension
     // return pointer into memory, for certain structures.
     uint8_t *getref(uint16_t addr);
     void req_int(uint8_t flags);
@@ -73,6 +81,10 @@ class Memory{
     uint8_t *raw_mem;
     bool *input; // input from sdl
     bool debug = false;
+    bool btnPressLimiter = false, awaitingSave = false;
+    savestate_t svstate;
+    void finish_save_state();
+    void load_from_save_state();
     bool is_change_speed();
     key_bindings_t kbs;
     private:

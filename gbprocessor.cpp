@@ -881,6 +881,33 @@ void CPU::pop(uint16_t* dat){
     (*flags) &= 0xF0; // Make sure flags doesn't change   
 }
 
+void CPU::savestate_handler(){
+    // Save State Management
+    if(mem->input[mem->kbs.svstate_sv] && mem->btnPressLimiter == false){
+        mem->btnPressLimiter = true;
+        mem->svstate = savestate_t(); // reset save state
+        mem->svstate.add_ram(mem->raw_mem);  
+        mem->svstate.add_rom(mem->mbc->full, mem->mbc->get_size());
+        mem->svstate.add_ext_ram(mem->mbc->externalmem, mem->mbc->get_ext_ram_size());
+        for(gbreg *r = &regs.AF; r <= &regs.PC; r++){
+            mem->svstate.add_reg(r->r16);
+        } // this is gross, I hope it doesn't work
+        mem->svstate.save(mem->rom_name);
+    }
+    if(mem->input[mem->kbs.svstate_ld] && mem->btnPressLimiter == false){
+        mem->btnPressLimiter = true;
+        mem->svstate = savestate_t();
+        mem->svstate.load(mem->rom_name);
+        mem->load_from_save_state();
+        for(int i = 0; i < 6; i++){
+            (((&regs.AF)+i))->r16 = mem->svstate.regs[i]; // stupid casting hack
+        }
+    }
+     if(!mem->input[mem->kbs.svstate_sv] && !mem->input[mem->kbs.svstate_ld]){
+        mem->btnPressLimiter = false;
+    }
+} // this should be cleaned up, but won't be
+
 bool CPU::tick(uint8_t cpu_cycles){
     
     for(int i = 0; i < cpu_cycles; i++){
@@ -888,6 +915,10 @@ bool CPU::tick(uint8_t cpu_cycles){
         ppu->tick();
         mem->tick();
     }
+
+    savestate_handler();
+
+    // handle savestate if requested
     // any interrupt
     if(!mem->get_int(0xFF)){
         return false;        

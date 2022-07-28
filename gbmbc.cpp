@@ -24,6 +24,9 @@ void MBC::fromraw(uint8_t* data){
 bool MBC::isramenabled(){
     return RAMEnabled;
 }
+int MBC::get_size(){ return size; }
+
+int MBC::get_ext_ram_size(){ return 2<<14; }
 
 uint8_t MBC::get(uint16_t addr){
     if(addr <= 0x3FFF){
@@ -102,6 +105,9 @@ void MBC3::fromraw(uint8_t* data){
 bool MBC3::isramenabled(){
     return RAMEnabled;
 }
+
+int MBC3::get_ext_ram_size(){ return 2<<14; }
+
 uint8_t MBC3::get(uint16_t addr){
     if(addr <= 0x3FFF){
         uint32_t realaddr = addr;

@@ -49,35 +49,49 @@ enum condition_e{
 class CPU{
     public:
     CPU(Memory *mem, Clock *clock);
+    
     void run();
+    
     PPU *getppu();
+    
     void print_info();
     void set_change_speed(double ops_mult);
     private:
     gbreg* get_first_arg(int lowbyte, regtype_e* ishigh);
     gbreg* get_last_arg(int lowbyte, regtype_e* ishigh);
+    
     void setbcdflags(uint8_t before, uint8_t operand, bool issub);
     void setbcddir(bool ishc, bool issub);
     void clearbcd();
+    
     bool tick(uint8_t cpu_cycles);
+    
     void halt();
     void push(uint16_t dat);
     void pop(uint16_t* dat);
     void cmp(int a, int b);
+    
     bool getflag(int flag);
     void setflag(int flag, bool set);
+    
     bool jmp(condition_e con, bool isCall, bool isNot);
     bool ret(condition_e con, bool isNot);
     void reti();
+    
+    void savestate_handler();
+    
     int prefixop(uint8_t opcode);
     Memory *mem;
     Clock *clock;
     PPU *ppu;
+    
     bool IME, halt_flag;
     regs_t regs;
+    
     // points to AF.r8l
     uint8_t *flags;
     int change_speed = DEFAULT_SPEED * 2;
+    
     // interrupt logic
     // pointers to interrupt flags
     uint8_t *IE, *IF;

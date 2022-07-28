@@ -1,6 +1,16 @@
 #include "gbmem.h"
 #include <SDL2/SDL.h>
 
+std::string get_romname(std::string filename){
+    for(int i = 0; i < filename.length(); i++){
+        if(filename[i] == '.'){
+            return filename.substr(0, i); // gets up to one before i
+        }
+    }
+    return filename;
+}
+
+
 MBC *mbc_from_file(std::string filename){
     std::ifstream ifs (filename, std::ifstream::binary);
     std::filebuf* pbuf = ifs.rdbuf();
@@ -33,8 +43,33 @@ MBC *mbc_from_file(std::string filename){
     return mbc;
 }
 
-uint8_t getmbctype(uint8_t* data){
-    uint8_t raw_type = data[0x147];
+MBC *mbc_from_savestate(savestate_t sv){
+    std::size_t size = sv.rom_size;
+    uint8_t *full = sv.rom;
+    uint8_t t = getmbctype(full);
+    MBC* mbc;
+    switch (t){
+        case 0:
+        case 1:
+        mbc = new MBC();
+        mbc->fromraw(full);
+        break;
+        case 5:
+        mbc = (MBC*)(new MBC3());
+        mbc->fromraw(full);
+        break;
+        default:
+        std::cout << "Unknown/WIP MBC\n";
+        mbc = new MBC();
+        mbc->fromraw(full);
+        break;
+    }
+    mbc->set_size(size);
+    return mbc;
+}
+
+
+uint8_t getmbctypefromnum(uint8_t raw_type){
     if(raw_type == 0){
         return 0;
     } else if(raw_type <= 0x3){
@@ -58,6 +93,11 @@ uint8_t getmbctype(uint8_t* data){
     }
 }
 
+uint8_t getmbctype(uint8_t* data){
+    uint8_t raw_type = data[0x147];
+    return getmbctypefromnum(raw_type);
+}
+
 void print_cart_info(cart_info* inf) {
     std::cout << "Title: " << std::string((char*) inf->title) << std::endl;
 }
@@ -76,6 +116,8 @@ Memory::Memory(bool* input, EmulatorConfig cfg){
     kbs.left = cfg.layout[6].key;
     kbs.right = cfg.layout[7].key;
     kbs.speed_change = cfg.layout[8].key;
+    kbs.svstate_sv = cfg.layout[9].key;
+    kbs.svstate_ld = cfg.layout[10].key;
 }
 
 
@@ -234,6 +276,12 @@ void Memory::tick(){
     mbc->tick();
 }
 
+void Memory::load_from_save_state(){
+    mbc = mbc_from_savestate(this->svstate);
+    raw_mem = svstate.ram;
+    mbc->externalmem = svstate.extram;
+}
+
 void Memory::dump(){
     std::ofstream oftest ("test.dmp", std::ofstream::binary);
     oftest.write((char*)raw_mem, 0x10000);
@@ -243,6 +291,7 @@ void Memory::dump(){
 cart_info* Memory::load_cartridge(std::string filename){
     mbc = mbc_from_file(filename);   
     // load cartridge into inf
+    rom_name = get_romname(filename);
     std::memcpy(&inf, mbc->full+0x100, sizeof(cart_info));
     reset_regs();
     print_cart_info(&inf);

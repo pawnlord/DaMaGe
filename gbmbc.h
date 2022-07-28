@@ -20,8 +20,10 @@ public:
     virtual void set_size(int sz){ this->size = sz;}
     virtual void print_info();
     virtual bool isramenabled();
-protected:
+    int get_size();
+    virtual int get_ext_ram_size();
     uint8_t* externalmem;
+protected:
     uint8_t lowbankreg = 0, hibankreg = 0;
     bool RAMEnabled = false;
     bool mode = false;
@@ -36,6 +38,7 @@ class MBC3 : public MBC{
     virtual void set(uint16_t addr, uint8_t val);
     virtual void tick();
     virtual bool isramenabled();
+    virtual int get_ext_ram_size();
     private:
     uint8_t last_latch = 0xff;
     bool latched = false;

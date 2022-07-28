@@ -12,6 +12,8 @@ EmulatorConfig::EmulatorConfig(){
     layout[6] = {"L", SDL_SCANCODE_LEFT};
     layout[7] = {"R", SDL_SCANCODE_RIGHT};
     layout[8] = {"SPEED_CHANGE", SDL_SCANCODE_LCTRL};
+    layout[9] = {"SVSTATE_SV", SDL_SCANCODE_K};
+    layout[10] = {"SVSTATE_LD", SDL_SCANCODE_L};
 }
 
 SDL_Scancode string_to_scancode(std::string keyname){
@@ -30,6 +32,8 @@ EmulatorConfig::EmulatorConfig(std::string filename){
     layout[6] = {"L", SDL_SCANCODE_LEFT};
     layout[7] = {"R", SDL_SCANCODE_RIGHT};
     layout[8] = {"SPEED_CHANGE", SDL_SCANCODE_LCTRL};
+    layout[9] = {"SVSTATE_SV", SDL_SCANCODE_K};
+    layout[10] = {"SVSTATE_LD", SDL_SCANCODE_L};
 
     
     std::ifstream ifs (filename, std::ifstream::binary);

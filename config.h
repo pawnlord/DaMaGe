@@ -15,7 +15,7 @@ struct Button{
 struct EmulatorConfig {
     EmulatorConfig();
     EmulatorConfig(std::string filename);
-    Button layout[9];    
+    Button layout[11];    
     double ops_mult;
 };
 
