@@ -56,6 +56,8 @@ class CPU{
     
     void print_info();
     void set_change_speed(double ops_mult);
+    void load_savestate(std::string name);
+    void save_savestate();
     private:
     gbreg* get_first_arg(int lowbyte, regtype_e* ishigh);
     gbreg* get_last_arg(int lowbyte, regtype_e* ishigh);
