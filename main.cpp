@@ -6,7 +6,7 @@ int main(int argc, char** argv){
     std::string config_name = "", savestate = "";
     bool isSaveState = false;
     for(int i = 1; i < argc; i++){
-        if(std::string(argv[i]) == "-v" || std::string(argv[i]) == "-V"){
+        if(std::string(argv[i]) == "-v" || std::string(argv[i]) == "--version"){
             std::cout << "DaMaGe - Original Gameboy Emulator" << std::endl;
             std::cout << "Version 1.2.0" << std::endl;
             return 0;
