@@ -3,9 +3,9 @@ Original Gameboy (DMG) emulator written in C++
 Version 1.2.0
 
 ## building/dependencies
-Currently, this project requires SFML and (on windows) a MinGW thread library.  
+Currently, this project requires SDL2, SDL2_ttf, and (on windows) a MinGW thread library.  
 ```
-g++ *.cpp -lSDL2 -lSDL2main -std=c++11 -o DaMaGe.exe
+g++ *.cpp -lmingw32 -lSDL2 -lSDL2_ttf -lSDL2main -std=c++11 -o DaMaGe.exe
 ```
 
 ## usage
