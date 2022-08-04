@@ -95,6 +95,9 @@ void GraphicsManager::render_cb(){
                 case SDL_KEYUP:
                     input[evt.key.keysym.scancode] = false;  
                 break;
+                case SDL_MOUSEBUTTONDOWN:
+                    is_tlbr_fcsd =  evt.button.y < this->head;
+                break;
             }
         }
 

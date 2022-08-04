@@ -17,7 +17,6 @@
 #include <fstream>
 #include <sstream>
 
-#define DEBUG_TOOLBAR
 
 struct Pixel : SDL_Rect{
     int r,g,b;
@@ -53,10 +52,12 @@ class GraphicsManager{
     void set_pxl(int x, int y, int col);
     void set_pxl(int x, int y, int r, int g, int b);
     bool *input; // scancode idx
-#ifdef DEBUG_TOOLBAR
     std::vector<std::string> *data;
-    void add_data_ptr(std::vector<std::string> *data);    
     TTF_Font *f;
+#ifdef DEBUG_TOOLBAR
+    void add_data_ptr(std::vector<std::string> *data);    
+#else  
+    bool is_tlbr_fcsd = false;
 #endif
     private:
     int w, h, s, head;

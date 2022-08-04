@@ -285,34 +285,36 @@ void CPU::run(){
             }
             if(l == 0x4 || l == 0xC){
                 uint8_t val, start;
+                ticks = 1;
                 if(ishigh != FULL){
                     start = getval(firstarg, ishigh);
                     val = start+1;
                     setval(firstarg, ishigh, val);    
                 } else {
+                    ticks = 3;
                     start = mem->get(firstarg->r16);
                     val = start+1;
                     mem->set(val, firstarg->r16);
                 }
                 setbcdflags(start, 1, false);
                 regs.PC.r16 += 1;
-                ticks = 1;
                 setflag(7, val == 0);
             }
             if(l == 0x5 || l == 0xD){
                 uint8_t val, start;
+                ticks = 1;
                 if(ishigh != FULL){
                     start = getval(firstarg, ishigh);
                     val = start-1;
                     setval(firstarg, ishigh, val);    
                 } else {
+                    ticks = 3;
                     start = mem->get(firstarg->r16);
                     val = start-1;
                     mem->set(val, firstarg->r16);
                 }    
                 setbcdflags(start, 1, true);
                 regs.PC.r16 += 1;
-                ticks = 1;
                 setflag(7, val == 0);
             }
             if(l == 0x6 ||  l == 0xE){
@@ -470,7 +472,7 @@ void CPU::run(){
                 gbreg *farg, *sarg;
                 farg = get_first_arg(opcode, &ftype);
                 sarg = get_last_arg(l%0x8, &stype);
-                if(l == 0x6 || l == 0xE || h == 0x7){
+                if(l == 0x6 || l == 0xE || (h == 0x7 && l <= 0x7)){
                     ticks = 2;
                 } else{
                     ticks = 1;
