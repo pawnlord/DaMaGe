@@ -229,7 +229,7 @@ void CPU::run(){
                     std::cout << "temp" << temp << "\n";
                     mem->dump();
                     std::ofstream oftest ("mbc.dmp", std::ofstream::binary);
-                    oftest.write((char*)(mem->mbc->full), 0x10000);
+                    oftest.write((char*)(mem->mbc->get_full()), mem->mbc->get_size());
                     oftest.close();
                 }
             }
@@ -898,8 +898,8 @@ void CPU::save_savestate(){
     mem->btnPressLimiter = true;
     mem->svstate = savestate_t(); // reset save state
     mem->svstate.add_ram(mem->raw_mem);  
-    mem->svstate.add_rom(mem->mbc->full, mem->mbc->get_size());
-    mem->svstate.add_ext_ram(mem->mbc->externalmem, mem->mbc->get_ext_ram_size());
+    mem->svstate.add_rom(mem->mbc->get_full(), mem->mbc->get_size());
+    mem->svstate.add_ext_ram(mem->mbc->get_ext_mem(), mem->mbc->get_ext_ram_size());
     for(gbreg *r = &regs.AF; r <= &regs.PC; r++){
         mem->svstate.add_reg(r->r16);
     } // this is gross, I hope it doesn't work

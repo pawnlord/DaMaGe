@@ -26,18 +26,21 @@ MBC *mbc_from_file(std::string filename){
     MBC* mbc;
     switch (t){
         case 0:
+        mbc = (MBC*)(new MBCNone());
+        mbc->fromraw(std::move(full));
+        break;
         case 1:
-        mbc = new MBC();
-        mbc->fromraw(full);
+        mbc = (MBC*)(new MBC1());
+        mbc->fromraw(std::move(full));
         break;
         case 5:
         mbc = (MBC*)(new MBC3());
-        mbc->fromraw(full);
+        mbc->fromraw(std::move(full));
         break;
         default:
         std::cout << "Unknown/WIP MBC\n";
-        mbc = new MBC();
-        mbc->fromraw(full);
+        mbc = (MBC*)(new MBC1());
+        mbc->fromraw(std::move(full));
         break;
     }
     mbc->set_size(size);
@@ -51,18 +54,21 @@ MBC *mbc_from_savestate(savestate_t sv){
     MBC* mbc;
     switch (t){
         case 0:
+        mbc = (MBC*)(new MBCNone());
+        mbc->fromraw(std::move(full));
+        break;
         case 1:
-        mbc = new MBC();
-        mbc->fromraw(full);
+        mbc = (MBC*)(new MBC1());
+        mbc->fromraw(std::move(full));
         break;
         case 5:
         mbc = (MBC*)(new MBC3());
-        mbc->fromraw(full);
+        mbc->fromraw(std::move(full));
         break;
         default:
         std::cout << "Unknown/WIP MBC\n";
-        mbc = new MBC();
-        mbc->fromraw(full);
+        mbc = (MBC*)(new MBC1());
+        mbc->fromraw(std::move(full));
         break;
     }
     mbc->set_size(size);
@@ -280,7 +286,7 @@ void Memory::tick(){
 void Memory::load_save_state(){
     mbc = mbc_from_savestate(this->svstate);
     std::memcpy(raw_mem, svstate.ram, 0x10000);
-    std::memcpy(mbc->externalmem , svstate.extram, svstate.external_ram_size);
+    std::memcpy(mbc->get_ext_mem() , svstate.extram, svstate.external_ram_size);
 }
 
 void Memory::dump(){
@@ -293,7 +299,7 @@ cart_info* Memory::load_cartridge(std::string filename){
     mbc = mbc_from_file(filename);   
     // load cartridge into inf
     rom_name = get_romname(filename);
-    std::memcpy(&inf, mbc->full+0x100, sizeof(cart_info));
+    std::memcpy(&inf, mbc->get_full()+0x100, sizeof(cart_info));
     reset_regs();
     print_cart_info(&inf);
     return &inf;

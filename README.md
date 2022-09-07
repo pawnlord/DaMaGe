@@ -3,10 +3,12 @@ Original Gameboy (DMG) emulator written in C++
 Version 1.2.0
 
 ## building/dependencies
+This project is designed and tested primarily on MinGW on Windows, but has also been tested successfully on Linux with GCC.  
 Currently, this project requires SDL2, SDL2_ttf, and (on windows) a MinGW thread library.  
 ```
-g++ *.cpp -lmingw32 -lSDL2 -lSDL2_ttf -lSDL2main -std=c++11 -o DaMaGe.exe
+g++ *.cpp -lSDL2 -lSDL2_ttf -lSDL2main -std=c++11 -o DaMaGe.exe -O3
 ```
+I may make a makefile in the future, but currently this is the easiest using MinGW on Windows.  
 
 ## usage
 The usage is currently pretty basic, I plan to add some sort of interface when more advanced features are added.  
@@ -51,7 +53,7 @@ CHANGE_SPEED
 SPEED_MULT
 ```
 The first 11 correspond to the table above, while the last changes the speed multiplier when pressing Change Speed.  
-The values for the key bind options come from [the SDL library](https://wiki.libsdl.org/SDL_Scancode). The value for SPEED_MULT is a floating-point number.
+The values for the key bind options come from [the SDL library](https://wiki.libsdl.org/SDL_Scancode). The value for SPEED_MULT is a floating-point number. Currently, it seems to be able to run at slightly less than 10x speed when built with full optimization.
 ## TODO
  - Serial input over network (Biggest goal)
  - GUI implemented

@@ -1,8 +1,61 @@
 #include "gbmbc.h"
 #include <time.h>
+#include <cstring>
+
+void MBCNone::fromfile(std::string filename){
+    std::ifstream ifs (filename, std::ifstream::binary);
+    std::filebuf* pbuf = ifs.rdbuf();
+    std::size_t size = pbuf->pubseekoff (0,ifs.end,ifs.in);
+    full = (uint8_t*)malloc(0x7FFF);
+    std::memset(full, 0, 0x7FFF);
+
+    pbuf->pubseekpos (0,ifs.in);
+    std::cout << size << std::endl;
+    pbuf->sgetn((char*)full, size);
+    ifs.close();
+
+    externalmem = (uint8_t*)malloc(EXTMEM_REGION);
+    memset(externalmem, 0, EXTMEM_REGION);
+}
+void MBCNone::fromraw(uint8_t *&&data){
+    full = (uint8_t*)realloc(data, 0x7FFF);
+    externalmem = (uint8_t*)malloc(EXTMEM_REGION);
+    memset(externalmem, 0, EXTMEM_REGION);
+}
+uint8_t MBCNone::get(uint16_t addr){
+    if(addr <= 0x7FFF){
+        return full[addr];
+    }
+    return externalmem[addr-0xA000];
+}
+uint8_t *MBCNone::getref(uint16_t addr){
+    if(addr <= 0x7FFF){
+        return full+addr;
+    }
+    return externalmem+addr-0xA000;
+}
+void MBCNone::set(uint16_t addr, uint8_t val){
+    if(addr <= 0x7FFF){
+        full[addr] = val;
+    }
+    externalmem[addr-0xA000] = val;
+}
+void MBCNone::tick(){} // unused by no MBC
+void MBCNone::set_size(int sz){}
+void MBCNone::print_info(){
+    std::cout << "No MBC\n";
+}
+bool MBCNone::isramenabled(){ return true; }
+int MBCNone::get_size() {return 0x7FFF;}
+int MBCNone::get_ext_ram_size(){return EXTMEM_REGION;}
+uint8_t *MBCNone::get_ext_mem(){return externalmem;}
+uint8_t *MBCNone::get_full() {return full;}
 
 
-void MBC::fromfile(std::string filename){
+
+
+
+void MBC1::fromfile(std::string filename){
     std::ifstream ifs (filename, std::ifstream::binary);
     std::filebuf* pbuf = ifs.rdbuf();
     std::size_t size = pbuf->pubseekoff (0,ifs.end,ifs.in);
@@ -16,19 +69,19 @@ void MBC::fromfile(std::string filename){
 
     externalmem = (uint8_t*)malloc(2<<14);
 }
-void MBC::fromraw(uint8_t* data){
+void MBC1::fromraw(uint8_t *&&data){
     full = data;
     externalmem = (uint8_t*)malloc(2<<14);
 }
 
-bool MBC::isramenabled(){
+bool MBC1::isramenabled(){
     return RAMEnabled;
 }
-int MBC::get_size(){ return size; }
+int MBC1::get_size(){ return size; }
 
-int MBC::get_ext_ram_size(){ return 2<<14; }
+int MBC1::get_ext_ram_size(){ return 2<<14; }
 
-uint8_t MBC::get(uint16_t addr){
+uint8_t MBC1::get(uint16_t addr){
     if(addr <= 0x3FFF){
         uint32_t realaddr = (mode)? addr | (hibankreg<<19):addr;
         return full[realaddr];
@@ -44,7 +97,7 @@ uint8_t MBC::get(uint16_t addr){
     }
 }
 
-uint8_t *MBC::getref(uint16_t addr){
+uint8_t *MBC1::getref(uint16_t addr){
    if(addr <= 0x3FFF){
         uint32_t realaddr = (mode)? addr | (hibankreg<<19):addr;
         return full+realaddr;
@@ -59,7 +112,7 @@ uint8_t *MBC::getref(uint16_t addr){
         return externalmem+realaddr;
     }
 }
-void MBC::set(uint16_t addr, uint8_t val){
+void MBC1::set(uint16_t addr, uint8_t val){
     if(addr <= 0x1FFF){
         RAMEnabled = (val & 0xA) == 0xA;
     } else if(addr <= 0x3FFF){
@@ -75,12 +128,12 @@ void MBC::set(uint16_t addr, uint8_t val){
         externalmem[realaddr] = val;
     }
 }
-void MBC::print_info(){
+void MBC1::print_info(){
     std::cout << "MBC Bank: " << (lowbankreg + (hibankreg<<0x5)) << "(mode: " << mode << ")" << std::endl;
     std::cout << "RAM Enabled: " << RAMEnabled << std::endl;
 
 }
-
+uint8_t *MBC1::get_ext_mem(){ return externalmem; }
 
 
 
@@ -98,7 +151,7 @@ void MBC3::fromfile(std::string filename){
 
     externalmem = (uint8_t*)malloc(2<<14);
 }
-void MBC3::fromraw(uint8_t* data){
+void MBC3::fromraw(uint8_t *&&data){
     full = data;
     externalmem = (uint8_t*)malloc(2<<14);
 }
